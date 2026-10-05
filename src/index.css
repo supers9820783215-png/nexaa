@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Original Signature Brand Palette */
+    --color-primary: #8458B3;
+    --color-primary-dark: #71489d;
+    --color-accent-lavender: #D0BDF4;
+    --color-accent-blue: #A0D2EB;
+    --color-surface: #E5EAF5;
+    --color-border-subtle: #E5EAF5;
+
+    /* Slate Charcoal / Text */
+    --color-charcoal: #494D5F;
+    --color-charcoal-muted: #6B7280;
+    --color-charcoal-light: #9CA3AF;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: #F9FAFB;
+    color: #494D5F;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.025em;
+    color: #494D5F;
+  }
+}
+
+/* Custom scrollbar styled with subtle purple/lavender accents */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAFAFC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D0BDF4;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8458B3;
+}
+

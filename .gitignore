@@ -1,0 +1,15 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+.antigravity/
+.vscode/
+scratch/
+target/
+backend-java/target/
+
+data/
