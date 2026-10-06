@@ -108,19 +108,14 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     <div className="min-h-screen w-full bg-[#F9FAFB] flex flex-col justify-center items-center py-4 px-3 sm:px-4 text-[#494D5F] selection:bg-[#8458B3] selection:text-white">
       <div className="w-full max-w-sm sm:max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Compact Brand Header */}
-        <div className="flex items-center justify-center gap-2.5 mb-3">
-          <div className="w-11 h-11 flex items-center justify-center shrink-0 drop-shadow-xs transition-transform hover:scale-105">
-            <AlumniLogo className="w-full h-full" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F242D] tracking-tight font-heading leading-tight">
-              AlumNexa
-            </h1>
-            <p className="text-[11px] text-[#7E8696] font-medium leading-tight">
-              DTSS College of Commerce · Alumni Network
-            </p>
-          </div>
+        {/* Clean Minimalist Brand Header */}
+        <div className="text-center mb-3.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] tracking-tight font-heading">
+            AlumNexa
+          </h1>
+          <p className="text-xs text-[#7E8696] font-medium mt-0.5">
+            DTSS College of Commerce · Alumni Network
+          </p>
         </div>
 
         {/* Main Elevated Auth Card */}
