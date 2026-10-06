@@ -89,8 +89,11 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     <div className="min-h-screen w-full bg-[#F9FAFB] flex flex-col justify-center items-center py-4 px-3 sm:px-4 text-[#494D5F] selection:bg-[#8458B3] selection:text-white">
       <div className="w-full max-w-sm sm:max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Clean Minimalist Brand Header */}
-        <div className="text-center mb-3.5">
+        {/* Brand Header */}
+        <div className="text-center mb-2.5">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-white shadow-xs border border-[#E6E1D7] p-1.5 mb-1 transition-transform hover:scale-105">
+            <AlumniLogo className="w-full h-full" />
+          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] tracking-tight font-heading">
             AlumNexa
           </h1>
