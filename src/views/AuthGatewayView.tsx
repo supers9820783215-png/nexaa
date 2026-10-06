@@ -110,7 +110,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
         
         {/* Compact Brand Header */}
         <div className="flex items-center justify-center gap-2.5 mb-3">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white shadow-xs border border-[#E6E1D7] p-1.5 transition-transform hover:scale-105">
+          <div className="w-11 h-11 flex items-center justify-center shrink-0 drop-shadow-xs transition-transform hover:scale-105">
             <AlumniLogo className="w-full h-full" />
           </div>
           <div>

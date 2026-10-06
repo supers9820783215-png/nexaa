@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 import { UserUIDBadge } from './common/UserUIDBadge.tsx';
+import { AlumniLogo } from './AlumniLogo.tsx';
 
 interface NavbarProps {
   activeTab: string;
@@ -100,8 +101,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick(user ? 'home' : 'gateway')}
               className="flex items-center gap-2.5 text-left focus:outline-none group cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-xl bg-[#5A7458] text-white flex items-center justify-center shadow-xs group-hover:bg-[#4A6048] transition-colors">
-                <GraduationCap className="w-5 h-5" />
+              <div className="w-9 h-9 flex items-center justify-center shrink-0">
+                <AlumniLogo className="w-full h-full" />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
