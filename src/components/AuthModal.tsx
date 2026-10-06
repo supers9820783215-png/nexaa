@@ -9,12 +9,8 @@ import {
   Mail,
   User,
   AlertCircle,
-  CheckCircle,
-  Phone,
-  ArrowLeft
+  CheckCircle
 } from 'lucide-react';
-import { auth } from '../lib/firebase.ts';
-import { RecaptchaVerifier } from 'firebase/auth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -35,7 +31,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const effectiveMode = initialMode || defaultMode;
   const effectiveRole = initialRole || defaultRole;
-  const { login, register, loginWithGoogle, sendPhoneOtp, confirmPhoneOtp } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'register'>(effectiveMode);
   const [role, setRole] = useState<'STUDENT' | 'ALUMNI' | 'FACULTY'>(effectiveRole);
@@ -48,27 +44,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
 
-  // Phone Auth states
-  const [phoneMode, setPhoneMode] = useState(false);
-  const [phoneStep, setPhoneStep] = useState<'input' | 'otp'>('input');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [phoneConfirmationResult, setPhoneConfirmationResult] = useState<any>(null);
-  const [phoneLoading, setPhoneLoading] = useState(false);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-
   useEffect(() => {
     if (isOpen) {
       setMode(effectiveMode);
       setRole(effectiveRole);
       setError(null);
       setSuccess(null);
-      setPhoneMode(false);
-      setPhoneStep('input');
-      setPhoneNumber('');
-      setOtpCode('');
-      setPhoneConfirmationResult(null);
-      setPhoneError(null);
     }
   }, [isOpen, effectiveMode, effectiveRole]);
 
@@ -130,51 +111,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleSendPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phoneNumber.trim()) return;
-    setPhoneLoading(true);
-    setPhoneError(null);
-    try {
-      if (!(window as any).recaptchaModalVerifier) {
-        (window as any).recaptchaModalVerifier = new RecaptchaVerifier(auth, 'recaptcha-modal-phone-container', {
-          size: 'invisible'
-        });
-      }
-      const confirmation = await sendPhoneOtp(phoneNumber.trim(), (window as any).recaptchaModalVerifier);
-      setPhoneConfirmationResult(confirmation);
-      setPhoneStep('otp');
-    } catch (err: any) {
-      if ((window as any).recaptchaModalVerifier) {
-        try {
-          (window as any).recaptchaModalVerifier.clear();
-          (window as any).recaptchaModalVerifier = null;
-        } catch {}
-      }
-      setPhoneError(err?.message || 'Failed to send SMS code. Please verify the phone number.');
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
-  const handleVerifyPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otpCode.trim() || !phoneConfirmationResult) return;
-    setPhoneLoading(true);
-    setPhoneError(null);
-    try {
-      await confirmPhoneOtp(phoneConfirmationResult, otpCode.trim(), role);
-      setSuccess('Phone verification successful! Welcome.');
-      setTimeout(() => {
-        onClose();
-      }, 400);
-    } catch (err: any) {
-      setPhoneError(err?.message || 'Invalid or expired verification code.');
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F242D]/70 backdrop-blur-xs p-4 overflow-y-auto">
       <div
@@ -185,18 +121,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E6E1D7] bg-[#FAF8F5]">
           <div>
             <h2 className="text-lg font-bold text-[#1F242D] font-heading">
-              {phoneMode
-                ? 'Phone Sign-In'
-                : mode === 'login'
-                ? 'Sign In to AlumNexa'
-                : 'Join AlumNexa'}
+              {mode === 'login' ? 'Sign In to AlumNexa' : 'Join AlumNexa'}
             </h2>
             <p className="text-xs text-[#7E8696]">
-              {phoneMode
-                ? phoneStep === 'input'
-                  ? 'Enter your mobile number with country code'
-                  : 'Enter the 6-digit SMS verification code'
-                : mode === 'login'
+              {mode === 'login'
                 ? 'Enter your credentials to access your portal'
                 : 'Create your account with role, email, and password'}
             </p>
@@ -210,7 +138,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* Feedback Messages */}
-        {error && !phoneMode && (
+        {error && (
           <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
@@ -224,111 +152,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {phoneMode ? (
-          /* Phone Sign-In Flow */
-          <div className="p-6">
-            <button
-              type="button"
-              onClick={() => {
-                setPhoneMode(false);
-                setPhoneError(null);
-              }}
-              className="inline-flex items-center gap-1.5 text-xs text-[#7E8696] hover:text-[#1F242D] font-medium mb-4 cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to email sign-in</span>
-            </button>
-
-            {phoneError && (
-              <div className="mb-4 p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{phoneError}</span>
-              </div>
-            )}
-
-            {phoneStep === 'input' ? (
-              <form onSubmit={handleSendPhoneOtp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#565D6D] mb-1">
-                    Mobile Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="+91 9876543210"
-                    required
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] focus:outline-none focus:border-[#1F242D] focus:bg-white text-[#1F242D]"
-                  />
-                  <p className="text-[10px] text-[#7E8696] mt-1">
-                    Include country code (e.g. +91 for India, +1 for US).
-                  </p>
-                </div>
-
-                <div id="recaptcha-modal-phone-container"></div>
-
-                <button
-                  type="submit"
-                  disabled={phoneLoading || !phoneNumber.trim()}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#1F242D] hover:bg-[#343A46] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {phoneLoading ? (
-                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span>Send SMS Code</span>
-                  )}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyPhoneOtp} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#565D6D] mb-1">
-                    Verification Code
-                  </label>
-                  <input
-                    type="text"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    placeholder="6-digit OTP"
-                    required
-                    maxLength={6}
-                    className="w-full px-3 py-2 text-center tracking-widest text-base font-mono rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] focus:outline-none focus:border-[#1F242D] focus:bg-white text-[#1F242D]"
-                  />
-                  <div className="flex items-center justify-between mt-1 text-[11px] text-[#7E8696]">
-                    <span>Sent to {phoneNumber}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhoneStep('input');
-                        setOtpCode('');
-                        setPhoneError(null);
-                      }}
-                      className="text-[#8458B3] hover:underline cursor-pointer"
-                    >
-                      Change number
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={phoneLoading || otpCode.trim().length < 6}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#1F242D] hover:bg-[#343A46] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {phoneLoading ? (
-                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span>Verify & Continue</span>
-                  )}
-                </button>
-              </form>
-            )}
-          </div>
-        ) : (
-          /* Email / Password + Social Auth Form */
-          <>
-            {/* Tab switch */}
-            <div className="flex border border-[#E6E1D7] bg-[#FAF8F5] p-1 m-6 mb-4 rounded-2xl">
+        {/* Tab switch */}
+        <div className="flex border border-[#E6E1D7] bg-[#FAF8F5] p-1 m-6 mb-4 rounded-2xl">
               <button
                 type="button"
                 onClick={() => {
@@ -487,22 +312,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </svg>
                   <span>Continue with Google</span>
                 </button>
-
-                {/* Button 2: Phone Login */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhoneMode(true);
-                    setPhoneStep('input');
-                    setPhoneError(null);
-                    setOtpCode('');
-                  }}
-                  disabled={loading}
-                  className="w-full border border-gray-300 hover:bg-gray-50 flex items-center justify-center gap-3 py-2.5 px-4 font-medium text-sm rounded-xl transition-all text-[#1F242D] cursor-pointer disabled:opacity-50"
-                >
-                  <Phone className="w-4 h-4 text-[#5A7458] shrink-0" />
-                  <span>Continue with phone number</span>
-                </button>
               </div>
 
               <div className="text-center pt-2">
@@ -521,8 +330,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </div>
             </form>
-          </>
-        )}
       </div>
     </div>
   );
