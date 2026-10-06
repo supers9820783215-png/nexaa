@@ -126,40 +126,6 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
         {/* Main Elevated Auth Card */}
         <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-[#E6E1D7] shadow-xl">
           
-          {/* Segmented Mode Selector: Login vs Create Account */}
-          <div className="flex p-1 rounded-xl bg-[#F4F1EA] border border-[#E6E1D7] mb-3">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('login');
-                setError(null);
-                setSuccess(null);
-              }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                mode === 'login'
-                  ? 'bg-white text-[#1F242D] shadow-xs'
-                  : 'text-[#7E8696] hover:text-[#1F242D]'
-              }`}
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode('register');
-                setError(null);
-                setSuccess(null);
-              }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                mode === 'register'
-                  ? 'bg-white text-[#1F242D] shadow-xs'
-                  : 'text-[#7E8696] hover:text-[#1F242D]'
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
-
           {/* Form Header */}
           <div className="mb-3">
             <h2 className="text-lg font-bold text-[#1F242D] tracking-tight font-heading">
