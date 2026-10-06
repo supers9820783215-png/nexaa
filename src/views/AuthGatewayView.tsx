@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { authService } from '../services/authService.ts';
-import { AlumniLogo } from '../components/AlumniLogo.tsx';
 import {
   Eye,
   EyeOff,
@@ -146,10 +145,10 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     <div className="min-h-screen w-full bg-[#F9FAFB] flex flex-col justify-center items-center py-4 px-3 sm:px-4 text-[#494D5F] selection:bg-[#8458B3] selection:text-white">
       <div className="w-full max-w-sm sm:max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Brand Header with Logo on left and text on right */}
+        {/* Brand Header with green GraduationCap logo on the side */}
         <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-white shadow-xs border border-[#E6E1D7] p-1.5 flex items-center justify-center shrink-0 transition-transform hover:scale-105">
-            <AlumniLogo className="w-full h-full" />
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#5A7458] text-white flex items-center justify-center shadow-xs shrink-0 transition-transform hover:scale-105">
+            <GraduationCap className="w-6 h-6" />
           </div>
           <div className="text-left">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] tracking-tight font-heading leading-tight">
