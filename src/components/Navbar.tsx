@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 import { UserUIDBadge } from './common/UserUIDBadge.tsx';
+import { UserAvatar } from './common/UserAvatar.tsx';
 import { AlumniLogo } from './AlumniLogo.tsx';
 
 interface NavbarProps {
@@ -176,11 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] hover:bg-[#F4F1EA] transition-colors cursor-pointer"
                 >
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-7 h-7 rounded-lg object-cover border border-[#E6E1D7]"
-                  />
+                  <UserAvatar name={user.name} avatar={user.avatar} size="sm" />
                   <div className="hidden md:flex flex-col text-left">
                     <span className="text-xs font-bold text-[#1F242D] leading-tight line-clamp-1">
                       {user.name}
@@ -195,11 +192,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* User Dropdown */}
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-xl py-2 z-50 animate-in fade-in">
-                    <div className="px-4 py-2 border-b border-[#E6E1D7]">
-                      <p className="text-xs font-bold text-[#1F242D]">{user.name}</p>
-                      <p className="text-[11px] text-[#7E8696] font-mono">{user.email}</p>
-                      <div className="mt-2">
-                        <UserUIDBadge uid={user.uid} role={user.role} size="sm" />
+                    <div className="px-4 py-2.5 border-b border-[#E6E1D7] flex items-center gap-3">
+                      <UserAvatar name={user.name} avatar={user.avatar} size="md" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-[#1F242D] truncate">{user.name}</p>
+                        <p className="text-[11px] text-[#7E8696] font-mono truncate">{user.email}</p>
+                        <div className="mt-1">
+                          <UserUIDBadge uid={user.uid} role={user.role} size="sm" />
+                        </div>
                       </div>
                     </div>
 

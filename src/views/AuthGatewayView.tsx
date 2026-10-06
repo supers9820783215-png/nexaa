@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
-import { AlumniLogo } from '../components/AlumniLogo.tsx';
+import { authService } from '../services/authService.ts';
 import {
   Eye,
   EyeOff,
@@ -14,6 +14,7 @@ import {
   Mail,
   FileText,
   Lock,
+  KeyRound,
   X
 } from 'lucide-react';
 
@@ -36,7 +37,14 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | 'support' | null>(null);
+  const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | 'support' | 'forgot' | null>(null);
+
+  // Forgot Password Modal State
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Form State
   const [email, setEmail] = useState('');
@@ -85,20 +93,71 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     }
   };
 
+  const handleSendResetEmail = async () => {
+    if (!resetEmail.trim()) {
+      setResetStatus({ type: 'error', message: 'Please enter your registered collegiate email address.' });
+      return;
+    }
+    setResetLoading(true);
+    setResetStatus(null);
+    try {
+      const res = await authService.forgotPassword(resetEmail.trim());
+      setResetStatus({ type: 'success', message: res.message });
+    } catch (err: any) {
+      setResetStatus({ type: 'error', message: err?.message || 'Failed to dispatch reset instructions.' });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleDirectPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      setResetStatus({ type: 'error', message: 'Please enter your collegiate email address.' });
+      return;
+    }
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      setResetStatus({ type: 'error', message: 'Password must be at least 6 characters long.' });
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetStatus({ type: 'error', message: 'Passwords do not match. Please verify.' });
+      return;
+    }
+    setResetLoading(true);
+    setResetStatus(null);
+    try {
+      const res = await authService.resetPasswordDirectly(resetEmail.trim(), resetNewPassword);
+      setResetStatus({ type: 'success', message: res.message });
+      setPassword(resetNewPassword);
+      setEmail(resetEmail.trim());
+      setTimeout(() => {
+        setActiveModal(null);
+      }, 1500);
+    } catch (err: any) {
+      setResetStatus({ type: 'error', message: err?.message || 'Failed to update password.' });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#F9FAFB] flex flex-col justify-center items-center py-4 px-3 sm:px-4 text-[#494D5F] selection:bg-[#8458B3] selection:text-white">
       <div className="w-full max-w-sm sm:max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Brand Header */}
+        {/* Brand Header with Signature Collegiate Logo */}
         <div className="text-center mb-2.5">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-white shadow-xs border border-[#E6E1D7] p-1.5 mb-1 transition-transform hover:scale-105">
-            <AlumniLogo className="w-full h-full" />
+          <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#5A7458] text-white shadow-xs border border-[#4A6048] p-2 mb-1.5 transition-transform hover:scale-105">
+            <GraduationCap className="w-6 h-6" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] tracking-tight font-heading">
             AlumNexa
           </h1>
-          <p className="text-xs text-[#7E8696] font-medium mt-0.5">
-            DTSS College of Commerce · Alumni Network
+          <p className="text-xs text-[#5A7458] font-semibold tracking-wide mt-0.5">
+            Academic Network & Campus Network
+          </p>
+          <p className="text-[11px] text-[#7E8696] font-medium mt-0.5">
+            DTSS College of Commerce (Autonomous)
           </p>
         </div>
 
@@ -245,7 +304,13 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                 {mode === 'login' && (
                   <button
                     type="button"
-                    onClick={() => alert('Password reset link will be sent to your registered email.')}
+                    onClick={() => {
+                      setResetEmail(email.trim());
+                      setResetNewPassword('');
+                      setResetConfirmPassword('');
+                      setResetStatus(null);
+                      setActiveModal('forgot');
+                    }}
                     className="text-[10px] font-semibold text-[#8458B3] hover:underline cursor-pointer"
                   >
                     Forgot password?
@@ -386,10 +451,12 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                 {activeModal === 'terms' && <FileText className="w-4 h-4 text-[#5A7458]" />}
                 {activeModal === 'privacy' && <Lock className="w-4 h-4 text-[#5A7458]" />}
                 {activeModal === 'support' && <Building2 className="w-4 h-4 text-[#5A7458]" />}
+                {activeModal === 'forgot' && <KeyRound className="w-4 h-4 text-[#5A7458]" />}
                 <h3 className="font-bold text-sm text-[#1F242D]">
                   {activeModal === 'terms' && 'Terms of Academic Service'}
                   {activeModal === 'privacy' && 'Privacy & Data Protection Policy'}
                   {activeModal === 'support' && 'Campus Help & Support'}
+                  {activeModal === 'forgot' && 'Reset Collegiate Password'}
                 </h3>
               </div>
               <button
@@ -459,6 +526,95 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                     </div>
                   </div>
                 </>
+              )}
+
+              {activeModal === 'forgot' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-[#565D6D] leading-relaxed">
+                    Enter your registered collegiate email address below. You can immediately set a new password or request an email reset link.
+                  </p>
+
+                  {resetStatus && (
+                    <div
+                      className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
+                        resetStatus.type === 'success'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                          : 'bg-rose-50 border-rose-200 text-rose-800'
+                      }`}
+                    >
+                      {resetStatus.type === 'success' ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      )}
+                      <span>{resetStatus.message}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleDirectPasswordReset} className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
+                        Registered Email Address <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
+                        New Password (Min 6 chars) <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={resetNewPassword}
+                        onChange={(e) => setResetNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
+                        Confirm New Password <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={resetConfirmPassword}
+                        onChange={(e) => setResetConfirmPassword(e.target.value)}
+                        placeholder="Re-enter new password"
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="submit"
+                        disabled={resetLoading}
+                        className="flex-1 py-2 px-3 rounded-xl bg-[#1F242D] text-white text-xs font-bold hover:bg-[#343A46] transition-colors disabled:opacity-50 cursor-pointer text-center"
+                      >
+                        {resetLoading ? 'Updating...' : 'Set New Password Now'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSendResetEmail}
+                        disabled={resetLoading || !resetEmail.trim()}
+                        className="py-2 px-3 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-[#1F242D] text-xs font-semibold hover:bg-[#EFEBE3] transition-colors disabled:opacity-50 cursor-pointer text-center"
+                      >
+                        Send Reset Link
+                      </button>
+                    </div>
+                  </form>
+                </div>
               )}
             </div>
 

@@ -73,59 +73,72 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onOpenAuth }) =>
       {/* =========================================================================
           SECTION 1: HERO SECTION
           ========================================================================= */}
-      <section className="pt-10 sm:pt-16 pb-6 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto text-center">
-        {/* Network Pill */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FAF8F5] text-[#1F242D] border border-[#E6E1D7] text-xs font-semibold mb-6 tracking-wide shadow-2xs">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#5A7458]" />
-          <span>DTSS COLLEGE OF COMMERCE (AUTONOMOUS)</span>
-        </div>
+      <section className="pt-6 sm:pt-10 pb-6 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto text-center">
+        {/* Elevated Institutional Hero Card */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-[#E6E1D7] shadow-sm p-6 sm:p-10 lg:p-12 relative overflow-hidden">
+          {/* Institutional Pill */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#FAF8F5] text-[#1F242D] border border-[#E6E1D7] text-xs font-semibold mb-4 tracking-wide shadow-2xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#5A7458]" />
+            <span>DTSS COLLEGE OF COMMERCE (AUTONOMOUS)</span>
+          </div>
 
-        {/* Product Identity & Tagline */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-[#1F242D] tracking-tight font-heading leading-[1.08]">
-          AlumNexa
-        </h1>
-        <p className="text-xl sm:text-2xl lg:text-3xl font-medium text-[#565D6D] mt-2 tracking-tight">
-          Connect. Learn. Grow.
-        </p>
+          {/* Signature Collegiate Logo Badge */}
+          <div className="flex justify-center mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-[#5A7458] text-white flex items-center justify-center shadow-md border border-[#4A6048] transition-transform hover:scale-105">
+              <GraduationCap className="w-8 h-8" />
+            </div>
+          </div>
 
-        {/* Value Proposition */}
-        <p className="mt-5 text-base sm:text-lg text-[#565D6D] max-w-2xl mx-auto font-normal leading-relaxed">
-          Connecting DTSS College of Commerce students, alumni, and faculty into one unified academic, mentorship & career advancement network.
-        </p>
+          {/* Product Identity & Exact Requested Titles */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#1F242D] tracking-tight font-heading leading-tight">
+            AlumNexa
+          </h1>
+          <p className="text-base sm:text-xl font-bold text-[#5A7458] mt-1.5 tracking-tight">
+            AlumNexa Academic Network & Campus Network
+          </p>
+          <p className="text-xs sm:text-sm font-medium text-[#7E8696] mt-0.5 tracking-tight">
+            Connect. Learn. Grow.
+          </p>
 
-        {/* Primary Call-to-Action Buttons */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4 max-w-3xl mx-auto">
-          <button
-            onClick={() => onNavigate('directory')}
-            className="px-5 py-2.5 rounded-xl bg-[#1F242D] text-white font-semibold text-xs sm:text-sm hover:bg-[#343A46] transition-all shadow-sm flex items-center gap-2 cursor-pointer"
-          >
-            <Users className="w-4 h-4 text-[#C5CED9]" />
-            <span>Explore Alumni Directory</span>
-          </button>
+          {/* Value Proposition */}
+          <p className="mt-4 text-xs sm:text-sm text-[#565D6D] max-w-2xl mx-auto font-normal leading-relaxed">
+            Connecting DTSS College of Commerce students, alumni, and faculty into one unified academic, mentorship & career advancement network.
+          </p>
 
-          <button
-            onClick={() => onNavigate('mentorship')}
-            className="px-5 py-2.5 rounded-xl bg-[#FAF8F5] text-[#1F242D] border border-[#DCD6C9] font-semibold text-xs sm:text-sm hover:bg-[#F2EFE8] transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
-          >
-            <HeartHandshake className="w-4 h-4 text-[#8E82A8]" />
-            <span>Find a Mentor</span>
-          </button>
+          {/* Primary Call-to-Action Grid - Perfectly Aligned 4 Cards */}
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-4xl mx-auto">
+            <button
+              onClick={() => onNavigate('directory')}
+              className="w-full py-3 px-4 rounded-xl bg-[#1F242D] text-white font-semibold text-xs sm:text-sm hover:bg-[#343A46] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Users className="w-4 h-4 text-[#C5CED9] shrink-0" />
+              <span>Explore Alumni Directory</span>
+            </button>
 
-          <button
-            onClick={() => onNavigate('opportunities')}
-            className="px-5 py-2.5 rounded-xl bg-[#FAF8F5] text-[#1F242D] border border-[#DCD6C9] font-semibold text-xs sm:text-sm hover:bg-[#F2EFE8] transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
-          >
-            <Briefcase className="w-4 h-4 text-[#784433]" />
-            <span>Campus Opportunities</span>
-          </button>
+            <button
+              onClick={() => onNavigate('mentorship')}
+              className="w-full py-3 px-4 rounded-xl bg-[#FAF8F5] text-[#1F242D] border border-[#DCD6C9] font-semibold text-xs sm:text-sm hover:bg-[#F2EFE8] transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <HeartHandshake className="w-4 h-4 text-[#8E82A8] shrink-0" />
+              <span>Find a Mentor</span>
+            </button>
 
-          <button
-            onClick={() => onNavigate('events')}
-            className="px-5 py-2.5 rounded-xl bg-[#FAF8F5] text-[#1F242D] border border-[#DCD6C9] font-semibold text-xs sm:text-sm hover:bg-[#F2EFE8] transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
-          >
-            <Calendar className="w-4 h-4 text-[#D88A58]" />
-            <span>Campus Events</span>
-          </button>
+            <button
+              onClick={() => onNavigate('opportunities')}
+              className="w-full py-3 px-4 rounded-xl bg-[#FAF8F5] text-[#1F242D] border border-[#DCD6C9] font-semibold text-xs sm:text-sm hover:bg-[#F2EFE8] transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Briefcase className="w-4 h-4 text-[#784433] shrink-0" />
+              <span>Campus Opportunities</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('events')}
+              className="w-full py-3 px-4 rounded-xl bg-[#FAF8F5] text-[#1F242D] border border-[#DCD6C9] font-semibold text-xs sm:text-sm hover:bg-[#F2EFE8] transition-all shadow-2xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-[#D88A58] shrink-0" />
+              <span>Campus Events</span>
+            </button>
+          </div>
         </div>
 
         {/* Key Platform Statistics Counter */}

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { userService } from '../services/userService.ts';
 import { institutionService } from '../services/institutionService.ts';
 import { UserUIDBadge } from '../components/common/UserUIDBadge.tsx';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import {
   User as UserIcon,
   GraduationCap,
@@ -166,10 +167,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenAuth }) => {
         <div className="p-6 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-16 h-16 rounded-2xl object-cover border border-[#E6E1D7]"
+              <UserAvatar
+                name={user.name}
+                avatar={user.avatar}
+                size="xl"
+                className="w-16 h-16 rounded-2xl text-2xl"
               />
               <div>
                 <h3 className="text-base font-bold text-[#1F242D]">{user.name}</h3>

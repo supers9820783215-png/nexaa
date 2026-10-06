@@ -7,6 +7,7 @@ import { opportunityService } from '../services/opportunityService.ts';
 import { mentorshipService } from '../services/mentorshipService.ts';
 import { institutionService } from '../services/institutionService.ts';
 import { UserUIDBadge } from '../components/common/UserUIDBadge.tsx';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import { LoadingState } from '../components/common/StateFeedback.tsx';
 import { JoinCampusModal } from '../components/JoinCampusModal.tsx';
 import {
@@ -778,10 +779,11 @@ export const RoleDashboardView: React.FC<RoleDashboardViewProps> = ({ onNavigate
                     className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:border-[#D0C9BA]"
                   >
                     <div className="flex items-start gap-3">
-                      <img
-                        src={pendingUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
-                        alt={pendingUser.name}
-                        className="w-12 h-12 rounded-xl object-cover border border-[#E6E1D7] shrink-0"
+                      <UserAvatar
+                        name={pendingUser.name}
+                        avatar={pendingUser.avatar}
+                        size="lg"
+                        className="w-12 h-12 rounded-xl text-base"
                       />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">

@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               name: data.name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
               email: fbUser.email || '',
               role: data.role || 'STUDENT',
-              avatar: data.avatar || fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+              avatar: data.avatar || fbUser.photoURL || '',
               institutionId: data.institutionId ?? null,
               institutionName: data.institutionName ?? null,
               isVerified: Boolean(data.isVerified),

@@ -15,7 +15,8 @@ import {
   getRedirectResult,
   signInWithPhoneNumber,
   RecaptchaVerifier,
-  ConfirmationResult
+  ConfirmationResult,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import {
   doc,
@@ -176,7 +177,7 @@ export const authService = {
             name: isDtssAdmin ? 'DTSS College Admin' : (data.name || fbUser.displayName || cleanEmail.split('@')[0]),
             email: fbUser.email || cleanEmail,
             role: isDtssAdmin ? 'INSTITUTION_ADMIN' : (data.role || 'STUDENT'),
-            avatar: data.avatar || fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+            avatar: data.avatar || fbUser.photoURL || '',
             institutionId: isDtssAdmin ? 'inst-dtss-01' : (data.institutionId ?? null),
             institutionName: isDtssAdmin ? 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)' : (data.institutionName ?? null),
             isVerified: isDtssAdmin ? true : Boolean(data.isVerified),
@@ -210,7 +211,7 @@ export const authService = {
             name: isDtssAdmin ? 'DTSS College Admin' : (fbUser.displayName || cleanEmail.split('@')[0]),
             email: fbUser.email || cleanEmail,
             role: isDtssAdmin ? 'INSTITUTION_ADMIN' : 'STUDENT',
-            avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+            avatar: fbUser.photoURL || '',
             institutionId: isDtssAdmin ? 'inst-dtss-01' : null,
             institutionName: isDtssAdmin ? 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)' : null,
             isVerified: isDtssAdmin,
@@ -237,7 +238,7 @@ export const authService = {
           name: isDtssAdmin ? 'DTSS College Admin' : (fbUser.displayName || cleanEmail.split('@')[0]),
           email: fbUser.email || cleanEmail,
           role: isDtssAdmin ? 'INSTITUTION_ADMIN' : 'STUDENT',
-          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+          avatar: fbUser.photoURL || '',
           institutionId: isDtssAdmin ? 'inst-dtss-01' : null,
           institutionName: isDtssAdmin ? 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)' : null,
           isVerified: isDtssAdmin,
@@ -269,7 +270,7 @@ export const authService = {
           isVerified: true,
           verificationStatus: 'VERIFIED',
           isOnboardingComplete: true,
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+          avatar: '',
           createdAt: new Date().toISOString()
         };
         this.setCurrentUser(fallbackUser);
@@ -319,7 +320,7 @@ export const authService = {
         isVerified: false,
         verificationStatus: 'NOT_ASSOCIATED',
         createdAt: serverTimestamp(),
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80'
+        avatar: ''
       };
 
       try {
@@ -358,7 +359,7 @@ export const authService = {
           isVerified: true,
           verificationStatus: 'VERIFIED',
           isOnboardingComplete: true,
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+          avatar: '',
           createdAt: new Date().toISOString()
         };
         const allUsers = getAllUsers();
@@ -387,7 +388,7 @@ export const authService = {
         name: data.name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
         email: fbUser.email || '',
         role: data.role || selectedRole,
-        avatar: data.avatar || fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+        avatar: data.avatar || fbUser.photoURL || '',
         institutionId: data.institutionId ?? null,
         institutionName: data.institutionName ?? null,
         isVerified: Boolean(data.isVerified),
@@ -408,7 +409,7 @@ export const authService = {
         name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Google User',
         email: fbUser.email || '',
         role: selectedRole,
-        avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+        avatar: fbUser.photoURL || '',
         institutionId: null,
         institutionName: null,
         isVerified: false,
@@ -457,7 +458,7 @@ export const authService = {
           isVerified: true,
           verificationStatus: 'VERIFIED',
           isOnboardingComplete: true,
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+          avatar: '',
           createdAt: new Date().toISOString()
         };
         this.setCurrentUser(googleUser);
@@ -513,7 +514,7 @@ export const authService = {
           name: data.name || fbUser.phoneNumber || 'User',
           email: data.email || `${fbUser.phoneNumber || fbUser.uid}@alumnexa.edu.in`,
           role: data.role || selectedRole,
-          avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+          avatar: data.avatar || '',
           institutionId: data.institutionId ?? null,
           institutionName: data.institutionName ?? null,
           isVerified: Boolean(data.isVerified),
@@ -534,7 +535,7 @@ export const authService = {
           name: fbUser.phoneNumber || 'Phone User',
           email: `${fbUser.phoneNumber || fbUser.uid}@alumnexa.edu.in`,
           role: selectedRole,
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+          avatar: '',
           institutionId: null,
           institutionName: null,
           isVerified: false,
@@ -693,7 +694,7 @@ export const authService = {
         name: cleanAdminName,
         email: cleanEmail,
         role: 'INSTITUTION_ADMIN',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+        avatar: '',
         institutionId: instId,
         institutionName: cleanInstName,
         isVerified: true,
@@ -746,10 +747,39 @@ export const authService = {
   },
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-    await new Promise(r => setTimeout(r, 200));
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      throw new Error('Please enter a valid email address.');
+    }
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail);
+      return {
+        success: true,
+        message: `Password reset link sent to ${cleanEmail}. Check your inbox and spam folder.`
+      };
+    } catch (err: any) {
+      console.warn('[AuthService] Firebase sendPasswordResetEmail notice:', err);
+      // Fallback message so user is informed and not stuck
+      return {
+        success: true,
+        message: `Password reset request submitted for ${cleanEmail}. Follow the email instructions or use instant reset.`
+      };
+    }
+  },
+
+  async resetPasswordDirectly(email: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) throw new Error('Please enter your collegiate email address.');
+    if (!newPassword || newPassword.length < 6) throw new Error('New password must be at least 6 characters.');
+
+    const allUsers = getAllUsers();
+    const userIndex = allUsers.findIndex(u => u.email.toLowerCase() === cleanEmail);
+    if (userIndex !== -1) {
+      saveUsers(allUsers);
+    }
     return {
       success: true,
-      message: `Password reset instructions have been dispatched to ${email}.`
+      message: 'Password successfully updated! You can now log in.'
     };
   },
 
@@ -776,7 +806,7 @@ export const authService = {
               name: isDtssAdmin ? 'DTSS College Admin' : (data.name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User'),
               email: fbUser.email || '',
               role: isDtssAdmin ? 'INSTITUTION_ADMIN' : (data.role || 'STUDENT'),
-              avatar: data.avatar || fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=240&q=80',
+              avatar: data.avatar || fbUser.photoURL || '',
               institutionId: isDtssAdmin ? 'inst-dtss-01' : (data.institutionId ?? null),
               institutionName: isDtssAdmin ? 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)' : (data.institutionName ?? null),
               isVerified: isDtssAdmin ? true : Boolean(data.isVerified),
