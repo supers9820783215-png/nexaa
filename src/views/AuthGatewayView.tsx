@@ -11,6 +11,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Building2,
+  Mail,
+  FileText,
+  Lock,
   X
 } from 'lucide-react';
 
@@ -33,6 +36,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<'terms' | 'privacy' | 'support' | null>(null);
 
   // Form State - strictly collected
   const [email, setEmail] = useState('');
@@ -399,11 +403,136 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
           </div>
         </div>
 
-        {/* Subtle Institutional Footer */}
-        <div className="mt-2.5 text-center text-[10px] text-[#7E8696]">
-          <p>© {new Date().getFullYear()} DTSS College of Commerce · AlumNexa Ecosystem</p>
+        {/* Institutional Footer & Legal Links */}
+        <div className="mt-2.5 text-center text-[10px] text-[#7E8696] space-y-1">
+          <div className="flex items-center justify-center gap-3 font-medium">
+            <button
+              type="button"
+              onClick={() => setActiveModal('terms')}
+              className="hover:text-[#1F242D] hover:underline cursor-pointer transition-colors"
+            >
+              Terms of Service
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => setActiveModal('privacy')}
+              className="hover:text-[#1F242D] hover:underline cursor-pointer transition-colors"
+            >
+              Privacy Policy
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => setActiveModal('support')}
+              className="hover:text-[#1F242D] hover:underline cursor-pointer transition-colors"
+            >
+              Help & Support
+            </button>
+          </div>
+          <p>© {new Date().getFullYear()} DTSS College of Commerce (Autonomous) · AlumNexa</p>
         </div>
       </div>
+
+      {/* Legal & Info Modal */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-[#E6E1D7] w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E6E1D7] bg-[#FAF8F5]">
+              <div className="flex items-center gap-2">
+                {activeModal === 'terms' && <FileText className="w-4 h-4 text-[#5A7458]" />}
+                {activeModal === 'privacy' && <Lock className="w-4 h-4 text-[#5A7458]" />}
+                {activeModal === 'support' && <Building2 className="w-4 h-4 text-[#5A7458]" />}
+                <h3 className="font-bold text-sm text-[#1F242D]">
+                  {activeModal === 'terms' && 'Terms of Academic Service'}
+                  {activeModal === 'privacy' && 'Privacy & Data Protection Policy'}
+                  {activeModal === 'support' && 'Campus Help & Support'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="p-1 rounded-lg text-[#7E8696] hover:text-[#1F242D] hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 text-xs text-[#565D6D] space-y-3 leading-relaxed max-h-[60vh] overflow-y-auto">
+              {activeModal === 'terms' && (
+                <>
+                  <p className="font-semibold text-[#1F242D]">
+                    Collegiate Network Code of Conduct:
+                  </p>
+                  <p>
+                    1. <strong>Institutional Access:</strong> AlumNexa is the dedicated portal of Dhirajlal Talakchand Sankalchand (DTSS) College of Commerce. Only current students, verified alumni, and faculty are permitted to access collegiate resources.
+                  </p>
+                  <p>
+                    2. <strong>Professional Conduct:</strong> Members agree to engage respectfully during 1:1 mentorship sessions, discussions, and event participation. Any harassment or unsolicited advertising results in immediate account suspension.
+                  </p>
+                  <p>
+                    3. <strong>Job & Referral Integrity:</strong> All posted opportunities and referrals must be authentic and non-commercial.
+                  </p>
+                </>
+              )}
+
+              {activeModal === 'privacy' && (
+                <>
+                  <p className="font-semibold text-[#1F242D]">
+                    Commitment to Student & Alumni Privacy:
+                  </p>
+                  <p>
+                    1. <strong>Academic Data Security:</strong> Student roll numbers, academic records, and personal contact details are stored under secure encryption and are never exposed publicly.
+                  </p>
+                  <p>
+                    2. <strong>Gated Networking:</strong> Personal contact info (phone/email) is protected. Direct messaging is only enabled upon mutual connection acceptance.
+                  </p>
+                  <p>
+                    3. <strong>Zero Third-Party Sharing:</strong> Your personal data is never sold or shared with any third-party marketing companies.
+                  </p>
+                </>
+              )}
+
+              {activeModal === 'support' && (
+                <>
+                  <p className="font-semibold text-[#1F242D]">
+                    DTSS College Alumni & IT Secretariat:
+                  </p>
+                  <div className="space-y-2 mt-2">
+                    <div className="flex items-center gap-2.5 p-2 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7]">
+                      <Mail className="w-4 h-4 text-[#5A7458] shrink-0" />
+                      <div>
+                        <div className="font-bold text-[#1F242D]">Technical & Account Support</div>
+                        <div className="text-[11px] text-[#7E8696]">support@dtss.ac.in</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 p-2 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7]">
+                      <Building2 className="w-4 h-4 text-[#5A7458] shrink-0" />
+                      <div>
+                        <div className="font-bold text-[#1F242D]">Campus Location</div>
+                        <div className="text-[11px] text-[#7E8696]">Kurar Village, Malad (East), Mumbai, Maharashtra 400097</div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3 border-t border-[#E6E1D7] bg-[#FAF8F5] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="px-4 py-1.5 rounded-xl bg-[#1F242D] text-white font-semibold text-xs hover:bg-[#343A46] cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
