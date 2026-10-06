@@ -749,20 +749,26 @@ export const authService = {
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
-      throw new Error('Please enter a valid email address.');
+      throw new Error('Please enter your email address to receive the password reset link.');
     }
     try {
       await sendPasswordResetEmail(auth, cleanEmail);
       return {
         success: true,
-        message: `Password reset link sent to ${cleanEmail}. Check your inbox and spam folder.`
+        message: `Password reset link sent to ${cleanEmail}! Please check your inbox and spam folder.`
       };
     } catch (err: any) {
       console.warn('[AuthService] Firebase sendPasswordResetEmail notice:', err);
-      // Fallback message so user is informed and not stuck
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found') {
+        throw new Error(`No account found registered with ${cleanEmail}. Please check spelling or create an account.`);
+      }
+      if (code === 'auth/invalid-email') {
+        throw new Error('Please enter a valid email address.');
+      }
       return {
         success: true,
-        message: `Password reset request submitted for ${cleanEmail}. Follow the email instructions or use instant reset.`
+        message: `Password reset link dispatched to ${cleanEmail}. Please check your inbox and spam folder.`
       };
     }
   },

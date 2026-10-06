@@ -41,8 +41,6 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
 
   // Forgot Password Modal State
   const [resetEmail, setResetEmail] = useState('');
-  const [resetNewPassword, setResetNewPassword] = useState('');
-  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -93,49 +91,45 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     }
   };
 
-  const handleSendResetEmail = async () => {
-    if (!resetEmail.trim()) {
+  const handleForgotPasswordClick = async () => {
+    setError(null);
+    setSuccess(null);
+    const targetEmail = (email || '').trim();
+    if (targetEmail) {
+      setLoading(true);
+      try {
+        const res = await authService.forgotPassword(targetEmail);
+        setSuccess(res.message);
+      } catch (err: any) {
+        setError(err?.message || 'Failed to dispatch reset link to email.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setResetEmail('');
+      setResetStatus(null);
+      setActiveModal('forgot');
+    }
+  };
+
+  const handleSendResetEmail = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const target = resetEmail.trim() || email.trim();
+    if (!target) {
       setResetStatus({ type: 'error', message: 'Please enter your registered collegiate email address.' });
       return;
     }
     setResetLoading(true);
     setResetStatus(null);
     try {
-      const res = await authService.forgotPassword(resetEmail.trim());
+      const res = await authService.forgotPassword(target);
       setResetStatus({ type: 'success', message: res.message });
-    } catch (err: any) {
-      setResetStatus({ type: 'error', message: err?.message || 'Failed to dispatch reset instructions.' });
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const handleDirectPasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resetEmail.trim()) {
-      setResetStatus({ type: 'error', message: 'Please enter your collegiate email address.' });
-      return;
-    }
-    if (!resetNewPassword || resetNewPassword.length < 6) {
-      setResetStatus({ type: 'error', message: 'Password must be at least 6 characters long.' });
-      return;
-    }
-    if (resetNewPassword !== resetConfirmPassword) {
-      setResetStatus({ type: 'error', message: 'Passwords do not match. Please verify.' });
-      return;
-    }
-    setResetLoading(true);
-    setResetStatus(null);
-    try {
-      const res = await authService.resetPasswordDirectly(resetEmail.trim(), resetNewPassword);
-      setResetStatus({ type: 'success', message: res.message });
-      setPassword(resetNewPassword);
-      setEmail(resetEmail.trim());
+      setSuccess(res.message);
       setTimeout(() => {
         setActiveModal(null);
-      }, 1500);
+      }, 2000);
     } catch (err: any) {
-      setResetStatus({ type: 'error', message: err?.message || 'Failed to update password.' });
+      setResetStatus({ type: 'error', message: err?.message || 'Failed to dispatch reset instructions.' });
     } finally {
       setResetLoading(false);
     }
@@ -303,13 +297,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                 {mode === 'login' && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setResetEmail(email.trim());
-                      setResetNewPassword('');
-                      setResetConfirmPassword('');
-                      setResetStatus(null);
-                      setActiveModal('forgot');
-                    }}
+                    onClick={handleForgotPasswordClick}
                     className="text-[10px] font-semibold text-[#8458B3] hover:underline cursor-pointer"
                   >
                     Forgot password?
@@ -530,7 +518,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
               {activeModal === 'forgot' && (
                 <div className="space-y-4">
                   <p className="text-xs text-[#565D6D] leading-relaxed">
-                    Enter your registered collegiate email address below. You can immediately set a new password or request an email reset link.
+                    Enter your registered collegiate email address below. A password reset link will be sent directly to your email inbox.
                   </p>
 
                   {resetStatus && (
@@ -550,7 +538,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                     </div>
                   )}
 
-                  <form onSubmit={handleDirectPasswordReset} className="space-y-3">
+                  <form onSubmit={handleSendResetEmail} className="space-y-3">
                     <div>
                       <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
                         Registered Email Address <span className="text-rose-600">*</span>
@@ -565,51 +553,17 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
-                        New Password (Min 6 chars) <span className="text-rose-600">*</span>
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={6}
-                        value={resetNewPassword}
-                        onChange={(e) => setResetNewPassword(e.target.value)}
-                        placeholder="Enter new password"
-                        className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
-                        Confirm New Password <span className="text-rose-600">*</span>
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={6}
-                        value={resetConfirmPassword}
-                        onChange={(e) => setResetConfirmPassword(e.target.value)}
-                        placeholder="Re-enter new password"
-                        className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white"
-                      />
-                    </div>
-
-                    <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                    <div className="pt-2">
                       <button
                         type="submit"
-                        disabled={resetLoading}
-                        className="flex-1 py-2 px-3 rounded-xl bg-[#1F242D] text-white text-xs font-bold hover:bg-[#343A46] transition-colors disabled:opacity-50 cursor-pointer text-center"
-                      >
-                        {resetLoading ? 'Updating...' : 'Set New Password Now'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSendResetEmail}
                         disabled={resetLoading || !resetEmail.trim()}
-                        className="py-2 px-3 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-[#1F242D] text-xs font-semibold hover:bg-[#EFEBE3] transition-colors disabled:opacity-50 cursor-pointer text-center"
+                        className="w-full py-2.5 px-4 rounded-xl bg-[#1F242D] text-white text-xs font-bold hover:bg-[#343A46] transition-colors disabled:opacity-50 cursor-pointer text-center flex items-center justify-center gap-2 shadow-xs"
                       >
-                        Send Reset Link
+                        {resetLoading ? (
+                          <span>Sending Link...</span>
+                        ) : (
+                          <span>Send Password Reset Link to Mail</span>
+                        )}
                       </button>
                     </div>
                   </form>
