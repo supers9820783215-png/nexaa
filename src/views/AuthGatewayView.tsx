@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { authService } from '../services/authService.ts';
+import { AlumniLogo } from '../components/AlumniLogo.tsx';
 import {
   Eye,
   EyeOff,
@@ -145,20 +146,19 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     <div className="min-h-screen w-full bg-[#F9FAFB] flex flex-col justify-center items-center py-4 px-3 sm:px-4 text-[#494D5F] selection:bg-[#8458B3] selection:text-white">
       <div className="w-full max-w-sm sm:max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Brand Header with Signature Collegiate Logo */}
-        <div className="text-center mb-2.5">
-          <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#5A7458] text-white shadow-xs border border-[#4A6048] p-2 mb-1.5 transition-transform hover:scale-105">
-            <GraduationCap className="w-6 h-6" />
+        {/* Brand Header with Logo on left and text on right */}
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-white shadow-xs border border-[#E6E1D7] p-1.5 flex items-center justify-center shrink-0 transition-transform hover:scale-105">
+            <AlumniLogo className="w-full h-full" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] tracking-tight font-heading">
-            AlumNexa
-          </h1>
-          <p className="text-xs text-[#5A7458] font-semibold tracking-wide mt-0.5">
-            Academic Network & Campus Network
-          </p>
-          <p className="text-[11px] text-[#7E8696] font-medium mt-0.5">
-            DTSS College of Commerce (Autonomous)
-          </p>
+          <div className="text-left">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] tracking-tight font-heading leading-tight">
+              AlumNexa
+            </h1>
+            <p className="text-xs text-[#7E8696] font-medium mt-0.5">
+              DTSS College of Commerce · Alumni Network
+            </p>
+          </div>
         </div>
 
         {/* Main Elevated Auth Card */}
