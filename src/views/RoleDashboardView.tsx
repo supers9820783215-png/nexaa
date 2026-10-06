@@ -841,7 +841,9 @@ export const RoleDashboardView: React.FC<RoleDashboardViewProps> = ({ onNavigate
         onClose={() => {
           setShowJoinCampusModal(false);
           setDismissedCampusModal(true);
+          onNavigate('dashboard');
         }}
+        onNavigate={onNavigate}
       />
 
       {/* Interactive Campus Events Management Modal */}

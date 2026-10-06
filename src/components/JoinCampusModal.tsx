@@ -22,11 +22,13 @@ import {
 interface JoinCampusModalProps {
   isOpen: boolean;
   onClose?: () => void;
+  onNavigate?: (tab: string) => void;
 }
 
 export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
   isOpen,
-  onClose
+  onClose,
+  onNavigate
 }) => {
   const { user, joinCampus } = useAuth();
   const [institutions, setInstitutions] = useState<Institution[]>(mockInstitutions);
@@ -144,11 +146,10 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
       });
 
       setSuccess(`Welcome to the official ${selectedInst.name} network! Your profile has been connected.`);
-      if (onClose) {
-        setTimeout(() => {
-          onClose();
-        }, 1200);
-      }
+      setTimeout(() => {
+        if (onClose) onClose();
+        if (onNavigate) onNavigate('dashboard');
+      }, 700);
     } catch (err: any) {
       setError(err?.message || 'Failed to join campus community.');
     } finally {
@@ -157,42 +158,42 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F242D]/75 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl border border-[#E6E1D7] w-full max-w-xl overflow-hidden my-6 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F242D]/80 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
+      <div className="bg-white rounded-3xl shadow-2xl border border-[#E6E1D7] w-full max-w-lg my-auto max-h-[92vh] flex flex-col relative overflow-hidden animate-in zoom-in-95">
         
         {/* Banner Header */}
-        <div className="p-6 bg-gradient-to-br from-[#FAF8F5] to-[#F2EFE8] border-b border-[#E6E1D7] flex items-center justify-between">
+        <div className="p-5 bg-gradient-to-br from-[#FAF8F5] to-[#F2EFE8] border-b border-[#E6E1D7] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#1F242D] text-white flex items-center justify-center shadow-sm shrink-0">
-              <Building2 className="w-6 h-6 text-[#A0D2EB]" />
+            <div className="w-10 h-10 rounded-2xl bg-[#1F242D] text-white flex items-center justify-center shadow-xs shrink-0">
+              <Building2 className="w-5 h-5 text-[#A0D2EB]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-[#1F242D] font-heading">
+                <h2 className="text-base sm:text-lg font-extrabold text-[#1F242D] font-heading">
                   Join Your Campus Community
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF2EA] text-[#345932] border border-[#CFE2CD] uppercase">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#EBF2EA] text-[#345932] border border-[#CFE2CD] uppercase">
                   Step 2 of 2
                 </span>
               </div>
-              <p className="text-xs text-[#565D6D] mt-0.5">
-                Connect your account to your university or college to unlock mentorship, directories, and events.
+              <p className="text-[11px] text-[#565D6D] mt-0.5">
+                Connect your account to DTSS College to access your full student dashboard.
               </p>
             </div>
           </div>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-[#7E8696] hover:text-[#1F242D] hover:bg-black/5 transition-colors cursor-pointer"
+              className="p-1.5 rounded-xl text-[#7E8696] hover:text-[#1F242D] hover:bg-black/5 transition-colors cursor-pointer"
               title="Close modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        {/* Scrollable Body */}
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-3.5 text-xs flex-1">
           {error && (
             <div className="p-3 rounded-xl bg-[#FEF2F2] border border-[#FCA5A5] text-xs text-[#991B1B] flex items-start gap-2 animate-in fade-in">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />

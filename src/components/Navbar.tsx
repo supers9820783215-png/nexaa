@@ -99,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Brand Logo & Tagline */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => handleNavClick(user ? 'home' : 'gateway')}
+              onClick={() => handleNavClick(user ? 'dashboard' : 'gateway')}
               className="flex items-center gap-2.5 text-left focus:outline-none group cursor-pointer"
             >
               <div className="w-9 h-9 rounded-xl bg-[#5A7458] text-white flex items-center justify-center shadow-xs group-hover:bg-[#4A6048] transition-colors">
