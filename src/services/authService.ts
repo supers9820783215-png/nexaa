@@ -758,18 +758,23 @@ export const authService = {
         message: `Password reset link sent to ${cleanEmail}! Please check your inbox and spam folder.`
       };
     } catch (err: any) {
-      console.warn('[AuthService] Firebase sendPasswordResetEmail notice:', err);
+      console.error('[AuthService] Firebase sendPasswordResetEmail error:', err);
       const code = err?.code || '';
-      if (code === 'auth/user-not-found') {
-        throw new Error(`No account found registered with ${cleanEmail}. Please check spelling or create an account.`);
+      const msg = err?.message || '';
+
+      if (code === 'auth/user-not-found' || msg.includes('user-not-found')) {
+        throw new Error(`No account found with ${cleanEmail} in Firebase Auth. Please register first.`);
       }
-      if (code === 'auth/invalid-email') {
+      if (code === 'auth/invalid-email' || msg.includes('invalid-email')) {
         throw new Error('Please enter a valid email address.');
       }
-      return {
-        success: true,
-        message: `Password reset link dispatched to ${cleanEmail}. Please check your inbox and spam folder.`
-      };
+      if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized domain')) {
+        throw new Error('Firebase Domain Block: Please add "alumnexa-five.vercel.app" in Firebase Console (Authentication -> Settings -> Authorized Domains).');
+      }
+      if (code === 'auth/too-many-requests') {
+        throw new Error('Too many requests. Firebase has temporarily throttled emails. Please wait a few minutes.');
+      }
+      throw new Error(msg || 'Firebase could not send the reset email. Please verify Firebase project settings.');
     }
   },
 
