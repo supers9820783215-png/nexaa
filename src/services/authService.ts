@@ -183,6 +183,8 @@ export const authService = {
             isVerified: isDtssAdmin ? true : Boolean(data.isVerified),
             verificationStatus: isDtssAdmin ? 'VERIFIED' : (data.verificationStatus || (data.institutionId ? 'PENDING' : 'NOT_ASSOCIATED')),
             isOnboardingComplete: isDtssAdmin ? true : Boolean(data.isOnboardingComplete || data.institutionId),
+            isFreeUser: Boolean(data.isFreeUser),
+            campusType: data.campusType,
             rollNumber: data.rollNumber,
             classYear: data.classYear,
             division: data.division,
@@ -287,10 +289,11 @@ export const authService = {
     name: string;
     email: string;
     password: string;
-    role: 'STUDENT' | 'ALUMNI' | 'FACULTY';
+    role?: 'STUDENT' | 'ALUMNI' | 'FACULTY';
   }): Promise<User> {
     const cleanEmail = payload.email.trim().toLowerCase();
     const cleanName = payload.name.trim();
+    const assignedRole: UserRole = payload.role || 'STUDENT';
 
     if (!cleanName || !cleanEmail || !payload.password) {
       throw new Error('Name, email, and password are required.');
@@ -314,11 +317,12 @@ export const authService = {
         uid: fbUser.uid,
         name: cleanName,
         email: cleanEmail,
-        role: payload.role,
+        role: assignedRole,
         institutionId: null,
         institutionName: null,
         isVerified: false,
         verificationStatus: 'NOT_ASSOCIATED',
+        isOnboardingComplete: false,
         createdAt: serverTimestamp(),
         avatar: ''
       };
@@ -334,12 +338,13 @@ export const authService = {
         uid: fbUser.uid,
         name: cleanName,
         email: cleanEmail,
-        role: payload.role,
+        role: assignedRole,
         avatar: userDocData.avatar,
         institutionId: null,
         institutionName: null,
         isVerified: false,
         verificationStatus: 'NOT_ASSOCIATED',
+        isOnboardingComplete: false,
         createdAt: new Date().toISOString()
       };
 
@@ -350,15 +355,15 @@ export const authService = {
         console.warn('[AuthService] Firebase unauthorized domain in register. Registering local session.');
         const localUser: User = {
           id: 'user-' + Date.now(),
-          uid: 'AN-' + payload.role.substring(0, 3) + '-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+          uid: 'AN-STU-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
           name: cleanName,
           email: cleanEmail,
-          role: payload.role,
-          institutionId: 'inst-dtss-01',
-          institutionName: 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)',
-          isVerified: true,
-          verificationStatus: 'VERIFIED',
-          isOnboardingComplete: true,
+          role: assignedRole,
+          institutionId: null,
+          institutionName: null,
+          isVerified: false,
+          verificationStatus: 'NOT_ASSOCIATED',
+          isOnboardingComplete: false,
           avatar: '',
           createdAt: new Date().toISOString()
         };
@@ -570,11 +575,14 @@ export const authService = {
     institutionId: string;
     institutionName: string;
     role?: 'STUDENT' | 'ALUMNI' | 'FACULTY';
-    department: string;
+    department?: string;
     course?: string;
-    graduationYear: number | string;
+    graduationYear?: number | string;
+    classYear?: string;
     company?: string;
     designation?: string;
+    isFreeUser?: boolean;
+    campusType?: 'PRIMARY' | 'OTHER';
   }): Promise<User> {
     const currentUser = this.getCurrentUser();
     if (!currentUser) {
@@ -584,25 +592,60 @@ export const authService = {
       throw new Error('Please select your college or institution.');
     }
 
-    const selectedRole = payload.role || currentUser.role || 'STUDENT';
+    const isOtherCollege = payload.institutionId === 'other-college' || payload.campusType === 'OTHER';
+    let selectedRole: UserRole = payload.role || currentUser.role || 'STUDENT';
+
+    // Role restriction: Other College users CANNOT select FACULTY
+    if (isOtherCollege && selectedRole === 'FACULTY') {
+      selectedRole = 'STUDENT';
+    }
+
+    const isFaculty = selectedRole === 'FACULTY';
+    const isStudent = selectedRole === 'STUDENT';
+
+    // If Other College: treated as unverified "Free User" -> isVerified: true (bypasses admin verification queue)
+    const isVerified = isOtherCollege ? true : false;
+    const verificationStatus = isOtherCollege ? ('VERIFIED' as const) : ('PENDING' as const);
+
+    // Generate or update Academic UID based on finalized role
+    let newUid = currentUser.uid;
+    if (!newUid || !newUid.startsWith('AN-')) {
+      const prefix = selectedRole === 'FACULTY' ? 'FAC' : selectedRole === 'ALUMNI' ? 'ALU' : 'STU';
+      newUid = `AN-${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    }
 
     const updates: Record<string, any> = {
+      uid: newUid,
       institutionId: payload.institutionId,
       institutionName: payload.institutionName,
       role: selectedRole,
-      department: payload.department.trim(),
-      course: payload.course?.trim() || 'General Studies',
-      graduationYear: Number(payload.graduationYear) || 2026,
+      department: payload.department ? payload.department.trim() : (isFaculty ? 'Information Technology Department' : 'General'),
+      course: isFaculty ? 'Faculty Member' : (payload.course?.trim() || 'General Studies'),
       isOnboardingComplete: true,
-      verificationStatus: 'PENDING' as const,
-      isVerified: false
+      verificationStatus,
+      isVerified,
+      isFreeUser: isOtherCollege,
+      campusType: isOtherCollege ? 'OTHER' : 'PRIMARY'
     };
 
-    if (payload.company?.trim()) {
-      updates.company = payload.company.trim();
-    }
-    if (payload.designation?.trim()) {
-      updates.designation = payload.designation.trim();
+    if (isStudent) {
+      updates.classYear = payload.classYear || 'FY';
+      if (payload.graduationYear) {
+        updates.graduationYear = Number(payload.graduationYear) || 2026;
+      } else {
+        const currentYear = new Date().getFullYear();
+        updates.graduationYear = payload.classYear === 'TY' ? currentYear : payload.classYear === 'SY' ? currentYear + 1 : currentYear + 2;
+      }
+    } else if (selectedRole === 'ALUMNI') {
+      if (payload.graduationYear) {
+        updates.graduationYear = Number(payload.graduationYear) || 2024;
+      }
+      if (payload.company?.trim()) {
+        updates.company = payload.company.trim();
+      }
+      if (payload.designation?.trim()) {
+        updates.designation = payload.designation.trim();
+      }
     }
 
     try {

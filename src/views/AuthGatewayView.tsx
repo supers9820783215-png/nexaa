@@ -31,7 +31,6 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
 }) => {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
-  const [role, setRole] = useState<'STUDENT' | 'ALUMNI' | 'FACULTY'>('STUDENT');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -78,8 +77,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
         await register({
           name: name.trim(),
           email: email.trim(),
-          password,
-          role
+          password
         });
         setSuccess('Account created successfully! Logging you in...');
         setTimeout(() => {
@@ -237,57 +235,19 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-2.5 text-xs">
             {mode === 'register' && (
-              <>
-                {/* Role Tabs for Registration */}
-                <div>
-                  <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
-                    Select Your Role
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'STUDENT', label: 'Student', icon: GraduationCap },
-                      { id: 'ALUMNI', label: 'Alumni', icon: Briefcase },
-                      { id: 'FACULTY', label: 'Faculty', icon: Shield }
-                    ].map(item => {
-                      const Icon = item.icon;
-                      const isSelected = role === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setRole(item.id as any);
-                            setError(null);
-                          }}
-                          className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-xl border text-center transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#1F242D] text-white border-[#1F242D] shadow-xs'
-                              : 'bg-[#FAF8F5] text-[#565D6D] border-[#E6E1D7] hover:bg-[#F2EFE8]'
-                          }`}
-                        >
-                          <Icon className="w-3.5 h-3.5" />
-                          <span className="text-[10px] font-semibold">{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Full Name */}
-                <div>
-                  <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-0.5">
-                    Full Name <span className="text-[#991B1B]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="e.g. Aryan Sharma"
-                    className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white transition-colors"
-                  />
-                </div>
-              </>
+              <div>
+                <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-0.5">
+                  Full Name <span className="text-[#991B1B]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Aryan Sharma"
+                  className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white transition-colors"
+                />
+              </div>
             )}
 
             {/* Email Address */}

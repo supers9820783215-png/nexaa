@@ -13,12 +13,14 @@ export interface User {
   institutionName?: string | null;
   department?: string;
   course?: string;
-  graduationYear?: number;
+  graduationYear?: number | string;
   currentRole?: string;
   company?: string;
   isVerified: boolean;
   verificationStatus: VerificationStatus;
   isOnboardingComplete?: boolean;
+  isFreeUser?: boolean;
+  campusType?: 'PRIMARY' | 'OTHER';
   rollNumber?: string;
   classYear?: string;
   division?: string;

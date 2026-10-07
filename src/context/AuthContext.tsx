@@ -12,16 +12,19 @@ interface AuthContextType {
   loading: boolean;
   unreadCount: number;
   login: (email: string, password?: string, rememberMe?: boolean) => Promise<User>;
-  register: (payload: { name: string; email: string; password: string; role: 'STUDENT' | 'ALUMNI' | 'FACULTY' }) => Promise<User>;
+  register: (payload: { name: string; email: string; password: string; role?: 'STUDENT' | 'ALUMNI' | 'FACULTY' }) => Promise<User>;
   joinCampus: (payload: {
     institutionId: string;
     institutionName: string;
     role?: 'STUDENT' | 'ALUMNI' | 'FACULTY';
-    department: string;
+    department?: string;
     course?: string;
-    graduationYear: number | string;
+    graduationYear?: number | string;
+    classYear?: string;
     company?: string;
     designation?: string;
+    isFreeUser?: boolean;
+    campusType?: 'PRIMARY' | 'OTHER';
   }) => Promise<User>;
   registerInstitution: (payload: {
     institutionName: string;
@@ -79,6 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isVerified: Boolean(data.isVerified),
               verificationStatus: data.verificationStatus || (data.institutionId ? 'PENDING' : 'NOT_ASSOCIATED'),
               isOnboardingComplete: Boolean(data.isOnboardingComplete || data.institutionId),
+              isFreeUser: Boolean(data.isFreeUser),
+              campusType: data.campusType,
               rollNumber: data.rollNumber,
               classYear: data.classYear,
               division: data.division,
@@ -128,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (payload: { name: string; email: string; password: string; role: 'STUDENT' | 'ALUMNI' | 'FACULTY' }): Promise<User> => {
+  const register = async (payload: { name: string; email: string; password: string; role?: 'STUDENT' | 'ALUMNI' | 'FACULTY' }): Promise<User> => {
     setLoading(true);
     try {
       const newUser = await authService.register(payload);
@@ -144,11 +149,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     institutionId: string;
     institutionName: string;
     role?: 'STUDENT' | 'ALUMNI' | 'FACULTY';
-    department: string;
+    department?: string;
     course?: string;
-    graduationYear: number | string;
+    graduationYear?: number | string;
+    classYear?: string;
     company?: string;
     designation?: string;
+    isFreeUser?: boolean;
+    campusType?: 'PRIMARY' | 'OTHER';
   }): Promise<User> => {
     setLoading(true);
     try {
