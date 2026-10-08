@@ -17,7 +17,8 @@ import {
   LayoutDashboard,
   LogOut,
   SlidersHorizontal,
-  PlusCircle
+  PlusCircle,
+  MessageSquare
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 import { UserUIDBadge } from './common/UserUIDBadge.tsx';
@@ -46,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'mentorship', label: 'Mentorship', icon: HeartHandshake },
     { id: 'opportunities', label: 'Opportunities', icon: Briefcase },
     { id: 'events', label: 'Events', icon: Calendar },
+    { id: 'messages', label: 'Messages', icon: MessageSquare },
   ];
 
   const handleNavClick = (tabId: string) => {
@@ -220,6 +222,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <span>Admin Console (Approvals)</span>
                         </button>
                       )}
+                      <button
+                        onClick={() => handleNavClick('messages')}
+                        className="w-full text-left px-4 py-2 text-xs font-medium text-[#1F242D] hover:bg-[#F7F5F0] flex items-center gap-2 cursor-pointer"
+                      >
+                        <MessageSquare className="w-4 h-4 text-[#5A7458]" />
+                        <span>Messages</span>
+                      </button>
                       <button
                         onClick={() => handleNavClick('profile')}
                         className="w-full text-left px-4 py-2 text-xs font-medium text-[#1F242D] hover:bg-[#F7F5F0] flex items-center gap-2 cursor-pointer"
