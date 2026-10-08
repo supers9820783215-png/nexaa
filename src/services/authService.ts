@@ -583,6 +583,9 @@ export const authService = {
     designation?: string;
     isFreeUser?: boolean;
     campusType?: 'PRIMARY' | 'OTHER';
+    linkedin?: string;
+    resumeUrl?: string;
+    portfolio?: string;
   }): Promise<User> {
     const currentUser = this.getCurrentUser();
     if (!currentUser) {
@@ -646,6 +649,17 @@ export const authService = {
       if (payload.designation?.trim()) {
         updates.designation = payload.designation.trim();
       }
+    }
+
+    if (payload.linkedin?.trim()) {
+      updates.linkedin = payload.linkedin.trim();
+    }
+    if (payload.resumeUrl?.trim()) {
+      updates.resumeUrl = payload.resumeUrl.trim();
+      updates.portfolio = payload.resumeUrl.trim();
+    } else if (payload.portfolio?.trim()) {
+      updates.portfolio = payload.portfolio.trim();
+      updates.resumeUrl = payload.portfolio.trim();
     }
 
     try {

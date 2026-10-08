@@ -132,5 +132,18 @@ export const messageService = {
     messages.push(newMsg);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
     return newMsg;
+  },
+
+  getOrCreateConversation: async (currentUserId: string, partnerId: string, initialMessage?: string): Promise<ChatMessage | null> => {
+    if (!currentUserId || !partnerId) return null;
+    const existing = await messageService.getMessages(currentUserId, partnerId);
+    if (existing.length === 0) {
+      return await messageService.sendMessage(
+        currentUserId,
+        partnerId,
+        initialMessage || 'Hi! Looking forward to our 1:1 mentorship sessions.'
+      );
+    }
+    return existing[0];
   }
 };

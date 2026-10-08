@@ -48,6 +48,9 @@ function MainLayout() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authRole, setAuthRole] = useState<'STUDENT' | 'ALUMNI'>('STUDENT');
   const [accessDeniedToast, setAccessDeniedToast] = useState<string | null>(null);
+  const [activeChatPartnerId, setActiveChatPartnerId] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? sessionStorage.getItem('alumnexa_active_chat_partner') : null;
+  });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState<{ title: string; body: React.ReactNode } | null>(null);
 
@@ -160,9 +163,16 @@ function MainLayout() {
     }
   };
 
-  const navigateTo = (tab: string) => {
+  const navigateTo = (tab: string, extraData?: any) => {
     if (tab === 'institutions' || tab === 'communities') {
       tab = 'directory';
+    }
+    if (tab === 'messages') {
+      const partnerId = extraData?.partnerId || extraData?.recipientId;
+      if (partnerId) {
+        setActiveChatPartnerId(partnerId);
+        sessionStorage.setItem('alumnexa_active_chat_partner', partnerId);
+      }
     }
     if (tab === 'admin') {
       if (!user || (user.role !== 'INSTITUTION_ADMIN' && user.role !== 'SUPER_ADMIN')) {
@@ -225,7 +235,13 @@ function MainLayout() {
         {activeTab === 'opportunities' && <OpportunitiesView onOpenAuth={() => handleOpenAuth('login')} />}
         {activeTab === 'events' && <EventsView onOpenAuth={() => handleOpenAuth('login')} />}
         {activeTab === 'network' && <MyNetworkView onOpenAuth={() => handleOpenAuth('login')} />}
-        {activeTab === 'messages' && <MessagesView onOpenAuth={() => handleOpenAuth('login')} />}
+        {activeTab === 'messages' && (
+          <MessagesView
+            onOpenAuth={() => handleOpenAuth('login')}
+            initialPartnerId={activeChatPartnerId}
+            onClearInitialPartner={() => setActiveChatPartnerId(null)}
+          />
+        )}
         {activeTab === 'dashboard' && <RoleDashboardView onNavigate={navigateTo} onOpenAuth={() => handleOpenAuth('login')} />}
         {activeTab === 'admin' && ((user?.role === 'INSTITUTION_ADMIN' || user?.role === 'SUPER_ADMIN') ? <AdminDashboardView /> : <RoleDashboardView onNavigate={navigateTo} onOpenAuth={() => handleOpenAuth('login')} />)}
         {activeTab === 'notifications' && <NotificationsView onNavigate={navigateTo} onOpenAuth={() => handleOpenAuth('login')} />}

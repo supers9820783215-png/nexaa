@@ -55,6 +55,8 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
   const [graduationYear, setGraduationYear] = useState(String(new Date().getFullYear()));
   const [company, setCompany] = useState('');
   const [designation, setDesignation] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [resumeUrl, setResumeUrl] = useState('');
 
   const [availableCourses, setAvailableCourses] = useState<string[]>([]);
   const [isCustomCourse, setIsCustomCourse] = useState(false);
@@ -159,6 +161,11 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
             firestoreUpdates.classYear = studentYear;
             firestoreUpdates.graduationYear = finalGradYear;
             if (course.trim()) firestoreUpdates.course = course.trim();
+            if (linkedinUrl.trim()) firestoreUpdates.linkedin = linkedinUrl.trim();
+            if (resumeUrl.trim()) {
+              firestoreUpdates.resumeUrl = resumeUrl.trim();
+              firestoreUpdates.portfolio = resumeUrl.trim();
+            }
           } else if (selectedRole === 'ALUMNI') {
             firestoreUpdates.graduationYear = finalGradYear;
             if (course.trim()) firestoreUpdates.course = course.trim();
@@ -185,6 +192,9 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
         graduationYear: finalGradYear,
         company: selectedRole === 'ALUMNI' ? company.trim() : undefined,
         designation: selectedRole === 'ALUMNI' ? designation.trim() : undefined,
+        linkedin: linkedinUrl.trim() || undefined,
+        resumeUrl: resumeUrl.trim() || undefined,
+        portfolio: resumeUrl.trim() || undefined,
         isFreeUser: isOtherCollege,
         campusType
       });
@@ -525,6 +535,39 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
                     className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D]"
                   />
                 )}
+              </div>
+
+              {/* Optional Portfolio & Context Links */}
+              <div className="pt-2 border-t border-[#E6E1D7] space-y-2">
+                <span className="text-[10px] font-bold text-[#565D6D] uppercase tracking-wider block">
+                  Portfolio & Context Links (Optional)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#565D6D] mb-1">
+                      LinkedIn Profile URL
+                    </label>
+                    <input
+                      type="url"
+                      value={linkedinUrl}
+                      onChange={e => setLinkedinUrl(e.target.value)}
+                      placeholder="https://linkedin.com/in/username"
+                      className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#565D6D] mb-1">
+                      Resume / Portfolio URL
+                    </label>
+                    <input
+                      type="url"
+                      value={resumeUrl}
+                      onChange={e => setResumeUrl(e.target.value)}
+                      placeholder="Google Drive, GitHub, or PDF link"
+                      className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D]"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

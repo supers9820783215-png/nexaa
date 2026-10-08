@@ -25,6 +25,9 @@ interface AuthContextType {
     designation?: string;
     isFreeUser?: boolean;
     campusType?: 'PRIMARY' | 'OTHER';
+    linkedin?: string;
+    resumeUrl?: string;
+    portfolio?: string;
   }) => Promise<User>;
   registerInstitution: (payload: {
     institutionName: string;
@@ -53,12 +56,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshNotifications = useCallback(async () => {
     try {
-      const count = await notificationService.getUnreadCount();
+      const count = await notificationService.getUnreadCount(user?.id);
       setUnreadCount(count);
     } catch {
       setUnreadCount(0);
     }
-  }, []);
+  }, [user?.id]);
+
+  useEffect(() => {
+    refreshNotifications();
+    const handleNotifAdded = () => {
+      refreshNotifications();
+    };
+    window.addEventListener('alumnexa_notification_added', handleNotifAdded);
+    window.addEventListener('storage', handleNotifAdded);
+    return () => {
+      window.removeEventListener('alumnexa_notification_added', handleNotifAdded);
+      window.removeEventListener('storage', handleNotifAdded);
+    };
+  }, [refreshNotifications]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
@@ -157,6 +173,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     designation?: string;
     isFreeUser?: boolean;
     campusType?: 'PRIMARY' | 'OTHER';
+    linkedin?: string;
+    resumeUrl?: string;
+    portfolio?: string;
   }): Promise<User> => {
     setLoading(true);
     try {

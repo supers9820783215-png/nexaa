@@ -31,6 +31,18 @@ export const userService = {
     const updated = { ...users[index], ...updates };
     users[index] = updated;
     saveAllUsers(users);
+
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.id === id) {
+      localStorage.setItem('alumni_connect_current_user', JSON.stringify(updated));
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', id), updates);
+    } catch (e) {
+      // offline/mock safe
+    }
+
     return updated;
   },
 

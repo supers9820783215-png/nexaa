@@ -22,8 +22,10 @@ import {
   X,
   FileText,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
+import { messageService } from '../services/messageService.ts';
 
 interface MentorshipViewProps {
   onOpenAuth: () => void;
@@ -46,12 +48,21 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
   const [requestGoals, setRequestGoals] = useState('Prepare for high-scale backend internship interviews');
   const [requestMessage, setRequestMessage] = useState('');
   const [requestSuccessMsg, setRequestSuccessMsg] = useState('');
+  const [menteeLinkedin, setMenteeLinkedin] = useState(user?.linkedin || '');
+  const [menteeResume, setMenteeResume] = useState(user?.resumeUrl || user?.portfolio || '');
 
   // Alumni notes modal
   const [noteModalRequest, setNoteModalRequest] = useState<MentorshipRequest | null>(null);
   const [noteText, setNoteText] = useState('');
 
   const isAlumni = user?.role === 'ALUMNI';
+
+  useEffect(() => {
+    if (user) {
+      setMenteeLinkedin(user.linkedin || '');
+      setMenteeResume(user.resumeUrl || user.portfolio || '');
+    }
+  }, [user]);
 
   const loadMentors = useCallback(async () => {
     setLoading(true);
@@ -82,6 +93,28 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
     loadRequests();
   }, [loadMentors, loadRequests]);
 
+  const handleChatWithMentor = async (partnerId: string, partnerName: string) => {
+    if (!user) {
+      onOpenAuth();
+      return;
+    }
+    try {
+      // 1. Check if conversation thread exists in Firestore/messages; if not, initialize one
+      await messageService.getOrCreateConversation(
+        user.id,
+        partnerId,
+        `Hi ${partnerName}! Looking forward to our 1:1 mentorship sessions.`
+      );
+    } catch (err) {
+      console.warn('Error starting conversation thread:', err);
+    }
+
+    // 2. Programmatically redirect to Messages view and auto-select mentor thread
+    if (onNavigate) {
+      onNavigate('messages', { partnerId, recipientId: partnerId, recipientName: partnerName });
+    }
+  };
+
   const handleSendRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetMentor || !user) return;
@@ -98,9 +131,11 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
       menteeUid: user.uid || user.id,
       menteeAvatar: user.avatar || '',
       menteeCourse: user.course || 'BSc Information Technology',
-      menteeYear: '3rd Year',
+      menteeYear: user.classYear || '3rd Year',
       topic: `${requestTopic} · Goals: ${requestGoals}`,
-      message: requestMessage
+      message: requestMessage,
+      menteeLinkedin: menteeLinkedin.trim() || undefined,
+      menteeResume: menteeResume.trim() || undefined
     });
 
     setRequestSuccessMsg(`Mentorship request submitted to ${targetMentor.name}! Status: PENDING.`);
@@ -400,6 +435,42 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
                       </div>
                     </div>
 
+                    {/* Mentee Context & Portfolio Links */}
+                    {(req.menteeLinkedin || req.menteeResume) && (
+                      <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] space-y-1.5 text-xs">
+                        <span className="font-bold text-[#565D6D] uppercase text-[10px] block">
+                          Mentee Background & Portfolio Links:
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {req.menteeLinkedin && (
+                            <a
+                              href={req.menteeLinkedin.startsWith('http') ? req.menteeLinkedin : `https://${req.menteeLinkedin}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0A66C2]/10 text-[#0A66C2] border border-[#0A66C2]/30 hover:bg-[#0A66C2]/20 transition-colors"
+                              title="Inspect Mentee LinkedIn Profile"
+                            >
+                              <span>LinkedIn Profile</span>
+                              <ExternalLink className="w-3 h-3 opacity-70" />
+                            </a>
+                          )}
+                          {req.menteeResume && (
+                            <a
+                              href={req.menteeResume.startsWith('http') ? req.menteeResume : `https://${req.menteeResume}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#5A7458]/10 text-[#345932] border border-[#5A7458]/30 hover:bg-[#5A7458]/20 transition-colors"
+                              title="Inspect Mentee Resume / Portfolio"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>Resume / Portfolio Link</span>
+                              <ExternalLink className="w-3 h-3 opacity-70" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Notes & Meeting info if accepted */}
                     {req.notes && (
                       <div className="p-3 rounded-xl bg-[#F4F9F3] border border-[#CDE5CC] text-xs">
@@ -408,36 +479,70 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
                       </div>
                     )}
 
-                    {/* Alumni action buttons */}
+                    {/* Alumni review action buttons for pending requests */}
                     {isAlumni && isPending && (
                       <div className="pt-2 flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleUpdateRequestStatus(req.id, 'REJECTED')}
-                          className="px-3 py-1.5 rounded-lg border border-[#E6E1D7] hover:bg-[#FBEAEA] hover:text-[#932F2F] text-xs font-semibold text-[#565D6D] transition-colors"
+                          className="px-3 py-1.5 rounded-lg border border-[#E6E1D7] hover:bg-[#FBEAEA] hover:text-[#932F2F] text-xs font-semibold text-[#565D6D] transition-colors cursor-pointer"
                         >
                           Decline
                         </button>
                         <button
                           onClick={() => handleUpdateRequestStatus(req.id, 'ACCEPTED', 'Accepted! 1:1 onboarding session scheduled for this weekend.')}
-                          className="px-4 py-1.5 rounded-lg bg-[#5A7458] hover:bg-[#485E46] text-white text-xs font-semibold transition-colors shadow-2xs"
+                          className="px-4 py-1.5 rounded-lg bg-[#5A7458] hover:bg-[#485E46] text-white text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
                         >
                           Accept Mentorship
                         </button>
                       </div>
                     )}
 
-                    {/* Alumni note adding option if accepted */}
-                    {isAlumni && isAccepted && (
-                      <div className="pt-2 flex justify-end">
-                        <button
-                          onClick={() => {
-                            setNoteModalRequest(req);
-                            setNoteText(req.notes || '');
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-xs font-semibold text-[#1F242D] hover:bg-[#EFEBE3]"
-                        >
-                          {req.notes ? 'Update Scheduling Notes' : 'Add Meeting Link / Notes'}
-                        </button>
+                    {/* Accepted Mentorship Actions (Direct Messaging & Calendar) */}
+                    {isAccepted && (
+                      <div className="pt-3 border-t border-[#E6E1D7] flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* 1. Chat with Mentor Action */}
+                          <button
+                            onClick={() => handleChatWithMentor(
+                              isAlumni ? (req.menteeId || req.menteeUid) : (req.mentorId || req.mentorUid),
+                              isAlumni ? req.menteeName : req.mentorName
+                            )}
+                            className="px-4 py-2 rounded-xl bg-[#1F242D] hover:bg-[#343A46] text-white text-xs font-bold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+                            title={isAlumni ? "Open direct chat with mentee" : "Open direct chat with mentor"}
+                          >
+                            <MessageSquare className="w-4 h-4 text-[#A0D2EB]" />
+                            <span>{isAlumni ? 'Chat with Mentee' : 'Chat with Mentor'}</span>
+                          </button>
+
+                          {/* 2. Schedule Meeting (Google Calendar link) */}
+                          <button
+                            onClick={() => {
+                              const title = `1:1 Mentorship Session: ${req.topic}`;
+                              const details = `Mentorship Session between ${req.mentorName} and ${req.menteeName}.\nFocus Topic: ${req.topic}\nNotes: ${req.notes || '1:1 Session'}`;
+                              const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(details)}`;
+                              window.open(calUrl, '_blank', 'noopener,noreferrer');
+                            }}
+                            className="px-3.5 py-2 rounded-xl border border-[#DCD6C9] bg-white text-[#1F242D] hover:bg-[#FAF8F5] text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                            title="Schedule 1:1 meeting on Google Calendar"
+                          >
+                            <Calendar className="w-3.5 h-3.5 text-[#5A7458]" />
+                            <span>Schedule Meeting</span>
+                            <ExternalLink className="w-3 h-3 text-[#7E8696]" />
+                          </button>
+                        </div>
+
+                        {/* 3. Mentor Notes option if alumni */}
+                        {isAlumni && (
+                          <button
+                            onClick={() => {
+                              setNoteModalRequest(req);
+                              setNoteText(req.notes || '');
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-xs font-semibold text-[#1F242D] hover:bg-[#EFEBE3] cursor-pointer"
+                          >
+                            {req.notes ? 'Update Notes / Meet Link' : 'Add Meet Link / Notes'}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -524,6 +629,39 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
                     placeholder="Describe what projects you have built, why you chose this mentor, and how often you would like to connect..."
                     className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                   />
+                </div>
+
+                {/* Optional Portfolio Context Links */}
+                <div className="pt-2 border-t border-[#E6E1D7] space-y-2">
+                  <span className="text-[10px] font-bold text-[#565D6D] uppercase tracking-wider block">
+                    Portfolio & Context Links (Optional):
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1F242D] mb-1">
+                        LinkedIn Profile URL
+                      </label>
+                      <input
+                        type="url"
+                        value={menteeLinkedin}
+                        onChange={(e) => setMenteeLinkedin(e.target.value)}
+                        placeholder="https://linkedin.com/in/username"
+                        className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1F242D] mb-1">
+                        Resume / Portfolio URL
+                      </label>
+                      <input
+                        type="url"
+                        value={menteeResume}
+                        onChange={(e) => setMenteeResume(e.target.value)}
+                        placeholder="Google Drive, GitHub, or PDF link"
+                        className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">

@@ -50,6 +50,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenAuth }) => {
   const [mentorshipAvailability, setMentorshipAvailability] = useState(true);
 
   // Social / External links
+  const [linkedinUrl, setLinkedinUrl] = useState(user?.linkedin || '');
+  const [resumeUrl, setResumeUrl] = useState(user?.resumeUrl || user?.portfolio || '');
   const [instagramUrl, setInstagramUrl] = useState(user?.instagram || '');
   const [youtubeUrl, setYoutubeUrl] = useState(user?.youtube || '');
   const [customLinkTitle, setCustomLinkTitle] = useState(user?.customLinkTitle || 'Personal Portfolio');
@@ -75,6 +77,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenAuth }) => {
       setGraduationYear(String(user.graduationYear || 2026));
       setLocation(user.location || 'Mumbai, India');
       if (user.skills) setSkillsStr(user.skills.join(', '));
+      setLinkedinUrl(user.linkedin || '');
+      setResumeUrl(user.resumeUrl || user.portfolio || '');
       setInstagramUrl(user.instagram || '');
       setYoutubeUrl(user.youtube || '');
       setCustomLinkTitle(user.customLinkTitle || 'Personal Portfolio');
@@ -129,11 +133,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenAuth }) => {
       graduationYear: Number(graduationYear),
       location,
       skills: skillsArr,
+      linkedin: linkedinUrl,
+      resumeUrl: resumeUrl,
+      portfolio: resumeUrl || customLinkUrl,
       instagram: instagramUrl,
       youtube: youtubeUrl,
       customLinkTitle,
-      customLinkUrl,
-      portfolio: customLinkUrl
+      customLinkUrl
     });
 
     updateUser(updated);
@@ -337,6 +343,40 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onOpenAuth }) => {
               placeholder="e.g. React, Docker, Python, SQL"
               className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
             />
+          </div>
+        </div>
+
+        {/* Professional & Portfolio Links (Available for Students, Alumni & Faculty) */}
+        <div className="p-6 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs space-y-4">
+          <div>
+            <h4 className="text-sm font-bold text-[#1F242D] uppercase tracking-wider">
+              Professional Links & Portfolio (LinkedIn & Resume)
+            </h4>
+            <p className="text-xs text-[#565D6D] mt-0.5">
+              Add your LinkedIn profile URL and Resume / Portfolio URL so mentors, peers, and recruiters can inspect your background.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block font-semibold text-[#1F242D] mb-1">LinkedIn Profile URL</label>
+              <input
+                type="url"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                placeholder="https://linkedin.com/in/username"
+                className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-[#1F242D] mb-1">Resume / Portfolio URL (Google Drive / GitHub / PDF)</label>
+              <input
+                type="url"
+                value={resumeUrl}
+                onChange={(e) => setResumeUrl(e.target.value)}
+                placeholder="https://drive.google.com/... or https://github.com/..."
+                className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+              />
+            </div>
           </div>
         </div>
 

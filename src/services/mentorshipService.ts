@@ -4,6 +4,7 @@ import { getAllUsers } from './authService.ts';
 import { mockAlumniProfiles } from '../data/users.ts';
 import { db } from '../lib/firebase.ts';
 import { collection, getDocs, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
+import { notificationService } from './notificationService.ts';
 
 const STORAGE_MENTORSHIP_KEY = 'alumnexa_mentorship_requests_v2';
 
@@ -156,6 +157,8 @@ export const mentorshipService = {
     menteeYear: string;
     topic: string;
     message: string;
+    menteeLinkedin?: string;
+    menteeResume?: string;
   }): Promise<MentorshipRequest> {
     const newReq: MentorshipRequest = {
       id: `ment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -176,12 +179,29 @@ export const mentorshipService = {
     const list = getStoredRequests();
     list.unshift(newReq);
     localStorage.setItem(STORAGE_MENTORSHIP_KEY, JSON.stringify(list));
+
+    // Trigger in-app notification for the mentor
+    try {
+      await notificationService.createNotification({
+        userId: payload.mentorId,
+        title: 'New Mentorship Request',
+        message: `${payload.menteeName} sent you a new 1:1 mentorship request for ${payload.topic}`,
+        type: 'MENTORSHIP',
+        linkUrl: 'mentorship',
+        actionLabel: 'Review Request'
+      });
+    } catch (notifErr) {
+      console.warn('[MentorshipService] Notification dispatch error:', notifErr);
+    }
+
     return newReq;
   },
 
   async updateStatus(requestId: string, status: MentorshipStatus, notes?: string): Promise<MentorshipRequest> {
     const list = getStoredRequests();
     const idx = list.findIndex(r => r.id === requestId);
+    const existingReq = idx !== -1 ? list[idx] : null;
+
     const updatedFields: any = {
       status,
       updatedAt: new Date().toISOString()
@@ -194,11 +214,44 @@ export const mentorshipService = {
       console.warn('[MentorshipService] Firestore updateDoc failed, updated locally:', err);
     }
 
+    let resultReq: MentorshipRequest;
     if (idx !== -1) {
       list[idx] = { ...list[idx], ...updatedFields };
       localStorage.setItem(STORAGE_MENTORSHIP_KEY, JSON.stringify(list));
-      return list[idx];
+      resultReq = list[idx];
+    } else {
+      resultReq = { id: requestId, ...updatedFields } as MentorshipRequest;
     }
-    return { id: requestId, ...updatedFields } as MentorshipRequest;
+
+    // Trigger in-app notification for the student/mentee
+    const menteeId = resultReq.menteeId || existingReq?.menteeId;
+    const mentorName = resultReq.mentorName || existingReq?.mentorName || 'Your mentor';
+    if (menteeId) {
+      try {
+        if (status === 'ACCEPTED') {
+          await notificationService.createNotification({
+            userId: menteeId,
+            title: 'Mentorship Request Accepted!',
+            message: `Your mentorship request with ${mentorName} has been accepted!`,
+            type: 'MENTORSHIP',
+            linkUrl: 'mentorship',
+            actionLabel: 'View Mentorship'
+          });
+        } else if (status === 'REJECTED') {
+          await notificationService.createNotification({
+            userId: menteeId,
+            title: 'Mentorship Request Update',
+            message: `Your mentorship request with ${mentorName} was not accepted at this time.`,
+            type: 'MENTORSHIP',
+            linkUrl: 'mentorship',
+            actionLabel: 'Browse Mentors'
+          });
+        }
+      } catch (notifErr) {
+        console.warn('[MentorshipService] Status notification dispatch error:', notifErr);
+      }
+    }
+
+    return resultReq;
   }
 };

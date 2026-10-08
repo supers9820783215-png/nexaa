@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { notificationsApi } from '../services/api.ts';
+import { notificationService } from '../services/notificationService.ts';
 import { NotificationItem } from '../types.ts';
 import { Bell, CheckCheck, Clock, ShieldCheck, UserPlus, Calendar, HeartHandshake } from 'lucide-react';
 
@@ -26,8 +27,19 @@ export const NotificationDropdown: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await notificationsApi.list();
-      setNotifications(res.notifications);
+      let items: NotificationItem[] = [];
+      try {
+        const res = await notificationsApi.list();
+        if (res && res.notifications && res.notifications.length > 0) {
+          items = res.notifications;
+        }
+      } catch {
+        // backend unavailable, fallback to notificationService
+      }
+      if (items.length === 0) {
+        items = await notificationService.getNotifications(user.id);
+      }
+      setNotifications(items);
     } catch (err) {
       console.error('Failed to load notifications:', err);
     } finally {
@@ -45,9 +57,10 @@ export const NotificationDropdown: React.FC = () => {
   const handleMarkAsRead = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await notificationsApi.markRead(id);
+      await notificationService.markAsRead(id);
+      try { await notificationsApi.markRead(id); } catch {}
       setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
+        prev.map(n => (n.id === id ? { ...n, isRead: true, is_read: true } : n))
       );
       await refreshNotifications();
     } catch (err) {
@@ -57,8 +70,9 @@ export const NotificationDropdown: React.FC = () => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationsApi.markAllRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      await notificationService.markAllAsRead(user?.id);
+      try { await notificationsApi.markAllRead(); } catch {}
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true, is_read: true })));
       await refreshNotifications();
     } catch (err) {
       console.error('Failed to mark all as read:', err);

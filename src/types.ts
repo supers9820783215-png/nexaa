@@ -31,6 +31,7 @@ export interface User {
   linkedin?: string;
   github?: string;
   portfolio?: string;
+  resumeUrl?: string;
   instagram?: string;
   youtube?: string;
   customLinkTitle?: string;
@@ -199,6 +200,8 @@ export interface MentorshipRequest {
   requestedAt: string;
   updatedAt?: string;
   notes?: string;
+  menteeLinkedin?: string;
+  menteeResume?: string;
 }
 
 export type CommunityType = 'INSTITUTION' | 'ACADEMIC' | 'YEAR_BATCH' | 'MENTORSHIP' | 'GENERAL' | 'DEPARTMENT' | 'INDUSTRY';

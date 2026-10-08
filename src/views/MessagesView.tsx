@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { messageService, ChatConversation, ChatMessage } from '../services/messageService.ts';
+import { getAllUsers } from '../services/authService.ts';
 import { userService } from '../services/userService.ts';
 import { UserUIDBadge } from '../components/common/UserUIDBadge.tsx';
 import { UserAvatar } from '../components/common/UserAvatar.tsx';
@@ -23,9 +24,16 @@ import {
 interface MessagesViewProps {
   onOpenAuth: () => void;
   onNavigateToProfile?: (uid: string) => void;
+  initialPartnerId?: string | null;
+  onClearInitialPartner?: () => void;
 }
 
-export const MessagesView: React.FC<MessagesViewProps> = ({ onOpenAuth, onNavigateToProfile }) => {
+export const MessagesView: React.FC<MessagesViewProps> = ({
+  onOpenAuth,
+  onNavigateToProfile,
+  initialPartnerId,
+  onClearInitialPartner
+}) => {
   const { user, updateUser } = useAuth();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [requestingVerification, setRequestingVerification] = useState(false);
@@ -37,16 +45,51 @@ export const MessagesView: React.FC<MessagesViewProps> = ({ onOpenAuth, onNaviga
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadConversations();
-  }, [user]);
+    const partnerToSelect = initialPartnerId || (typeof window !== 'undefined' ? sessionStorage.getItem('alumnexa_active_chat_partner') : null);
+    loadConversations(partnerToSelect);
+  }, [user, initialPartnerId]);
 
-  async function loadConversations() {
+  async function loadConversations(targetPartnerId?: string | null) {
     if (!user) return;
     setLoading(true);
     try {
       const convs = await messageService.getConversations(user.id);
+      let selectedConv: ChatConversation | null = null;
+
+      if (targetPartnerId) {
+        const tId = targetPartnerId.trim().toLowerCase();
+        selectedConv = convs.find(c =>
+          (c.partner.id || '').toLowerCase() === tId ||
+          (c.partner.uid || '').toLowerCase() === tId
+        ) || null;
+
+        // If no message thread exists yet, look up partner and initialize virtual thread
+        if (!selectedConv) {
+          const allUsers = getAllUsers();
+          const targetUser = allUsers.find(u =>
+            (u.id || '').toLowerCase() === tId ||
+            (u.uid || '').toLowerCase() === tId
+          );
+          if (targetUser) {
+            selectedConv = {
+              partner: targetUser,
+              lastMessage: 'Conversation active.',
+              lastMessageTime: 'Just now',
+              unreadCount: 0
+            };
+            convs.unshift(selectedConv);
+          }
+        }
+      }
+
       setConversations(convs);
-      if (convs.length > 0 && !activePartner) {
+
+      if (selectedConv) {
+        setActivePartner(selectedConv);
+        loadMessages(selectedConv.partner.id);
+        sessionStorage.removeItem('alumnexa_active_chat_partner');
+        if (onClearInitialPartner) onClearInitialPartner();
+      } else if (convs.length > 0 && !activePartner) {
         setActivePartner(convs[0]);
         loadMessages(convs[0].partner.id);
       }

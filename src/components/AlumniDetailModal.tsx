@@ -289,6 +289,37 @@ export const AlumniDetailModal: React.FC<AlumniDetailModalProps> = ({
             </div>
           </div>
 
+          {/* Professional Profiles & Portfolio Links */}
+          {(alumni.linkedin || alumni.portfolio || alumni.resumeUrl) && (
+            <div className="mb-4 p-3 rounded-2xl bg-[#E5EAF5]/30 border border-[#D0BDF4]/40 flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold text-[#494D5F]/70 uppercase tracking-wider block w-full mb-0.5">
+                Verified Context & Portfolio Links:
+              </span>
+              {alumni.linkedin && (
+                <a
+                  href={alumni.linkedin.startsWith('http') ? alumni.linkedin : `https://${alumni.linkedin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#0A66C2]/10 text-[#0A66C2] border border-[#0A66C2]/30 hover:bg-[#0A66C2]/20 transition-colors"
+                >
+                  <span>LinkedIn Profile</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                </a>
+              )}
+              {(alumni.resumeUrl || alumni.portfolio) && (
+                <a
+                  href={(alumni.resumeUrl || alumni.portfolio)!.startsWith('http') ? (alumni.resumeUrl || alumni.portfolio)! : `https://${alumni.resumeUrl || alumni.portfolio}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#8458B3]/10 text-[#8458B3] border border-[#D0BDF4] hover:bg-[#8458B3]/20 transition-colors"
+                >
+                  <span>Resume / Portfolio Link</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Bio */}
           <div className="mb-4">
             <h4 className="text-xs font-bold text-[#494D5F] uppercase tracking-wider mb-1.5">About</h4>
