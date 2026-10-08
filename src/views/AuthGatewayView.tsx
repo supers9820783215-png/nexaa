@@ -40,8 +40,6 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
 
   // Forgot Password Modal State
   const [resetEmail, setResetEmail] = useState('');
-  const [directNewPassword, setDirectNewPassword] = useState('');
-  const [showDirectReset, setShowDirectReset] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -95,8 +93,6 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     setError(null);
     setSuccess(null);
     setResetEmail((email || '').trim());
-    setDirectNewPassword('');
-    setShowDirectReset(false);
     setResetStatus(null);
     setActiveModal('forgot');
   };
@@ -105,7 +101,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     if (e) e.preventDefault();
     const target = resetEmail.trim() || email.trim();
     if (!target) {
-      setResetStatus({ type: 'error', message: 'Please enter your registered collegiate email address.' });
+      setResetStatus({ type: 'error', message: 'Please enter a valid email address.' });
       return;
     }
     setResetLoading(true);
@@ -113,38 +109,8 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
     try {
       const res = await authService.forgotPassword(target);
       setResetStatus({ type: 'success', message: res.message });
-      setSuccess(res.message);
     } catch (err: any) {
-      setResetStatus({ type: 'error', message: err?.message || 'Failed to dispatch reset link.' });
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  const handleDirectPasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const target = (resetEmail || email).trim();
-    if (!target) {
-      setResetStatus({ type: 'error', message: 'Please enter your registered email address.' });
-      return;
-    }
-    if (!directNewPassword || directNewPassword.length < 6) {
-      setResetStatus({ type: 'error', message: 'Password must be at least 6 characters long.' });
-      return;
-    }
-    setResetLoading(true);
-    setResetStatus(null);
-    try {
-      const res = await authService.resetPasswordDirectly(target, directNewPassword);
-      setResetStatus({ type: 'success', message: res.message });
-      setPassword(directNewPassword);
-      setEmail(target);
-      setSuccess('Password updated successfully! You can now sign in.');
-      setTimeout(() => {
-        setActiveModal(null);
-      }, 1200);
-    } catch (err: any) {
-      setResetStatus({ type: 'error', message: err?.message || 'Failed to update password.' });
+      setResetStatus({ type: 'error', message: err?.message || 'Failed to dispatch password reset link.' });
     } finally {
       setResetLoading(false);
     }
@@ -495,7 +461,7 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
               {activeModal === 'forgot' && (
                 <div className="space-y-4">
                   <p className="text-xs text-[#565D6D] leading-relaxed">
-                    Enter your registered email address below. You can send a reset link to your email or reset your password directly on screen.
+                    Enter your registered email address below. We'll send you a secure password reset link to access your account.
                   </p>
 
                   {resetStatus && (
@@ -523,10 +489,11 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                       <input
                         type="email"
                         required
+                        disabled={resetLoading}
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
                         placeholder="you@example.com"
-                        className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white"
+                        className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-[#FAF8F5] text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D] focus:bg-white disabled:opacity-60"
                       />
                     </div>
 
@@ -536,50 +503,17 @@ export const AuthGatewayView: React.FC<AuthGatewayViewProps> = ({
                         disabled={resetLoading || !resetEmail.trim()}
                         className="w-full py-2.5 px-4 rounded-xl bg-[#1F242D] text-white text-xs font-bold hover:bg-[#343A46] transition-colors disabled:opacity-50 cursor-pointer text-center flex items-center justify-center gap-2 shadow-xs"
                       >
-                        {resetLoading ? 'Sending Link...' : 'Send Password Reset Link to Mail'}
+                        {resetLoading ? (
+                          <>
+                            <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Sending Password Reset Link...</span>
+                          </>
+                        ) : (
+                          <span>Send Password Reset Link to Mail</span>
+                        )}
                       </button>
                     </div>
                   </form>
-
-                  {/* Direct Reset Alternative in case email doesn't arrive */}
-                  <div className="pt-2 border-t border-[#E6E1D7]">
-                    {!showDirectReset ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowDirectReset(true)}
-                        className="w-full py-2 px-3 rounded-xl bg-[#FAF8F5] border border-[#DCD6C9] hover:bg-[#F2EFE8] text-[11px] font-semibold text-[#5A7458] transition-colors cursor-pointer text-center"
-                      >
-                        Didn't receive email? Click here to Reset Directly on Screen →
-                      </button>
-                    ) : (
-                      <form onSubmit={handleDirectPasswordReset} className="space-y-3 pt-2">
-                        <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[11px] text-[#565D6D]">
-                          <strong>Direct Instant Reset:</strong> Set a new password immediately for <strong>{resetEmail || 'your email'}</strong> without waiting for mail.
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-[#565D6D] uppercase tracking-wider mb-1">
-                            New Password (Min 6 chars) <span className="text-rose-600">*</span>
-                          </label>
-                          <input
-                            type="password"
-                            required
-                            minLength={6}
-                            value={directNewPassword}
-                            onChange={(e) => setDirectNewPassword(e.target.value)}
-                            placeholder="Enter new password"
-                            className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D]"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={resetLoading || !directNewPassword || directNewPassword.length < 6}
-                          className="w-full py-2 px-3 rounded-xl bg-[#5A7458] hover:bg-[#4A6048] text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                          {resetLoading ? 'Updating...' : 'Set New Password & Sign In'}
-                        </button>
-                      </form>
-                    )}
-                  </div>
                 </div>
               )}
             </div>

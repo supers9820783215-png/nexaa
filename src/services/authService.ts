@@ -792,13 +792,13 @@ export const authService = {
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
-      throw new Error('Please enter your email address to receive the password reset link.');
+      throw new Error('Please enter a valid email address.');
     }
     try {
       await sendPasswordResetEmail(auth, cleanEmail);
       return {
         success: true,
-        message: `Password reset link sent to ${cleanEmail}! Please check your inbox and spam folder.`
+        message: 'Password reset link sent to your registered email. Please check your inbox and spam folder.'
       };
     } catch (err: any) {
       console.error('[AuthService] Firebase sendPasswordResetEmail error:', err);
@@ -806,35 +806,22 @@ export const authService = {
       const msg = err?.message || '';
 
       if (code === 'auth/user-not-found' || msg.includes('user-not-found')) {
-        throw new Error(`No account found with ${cleanEmail} in Firebase Auth. Please register first.`);
+        throw new Error('No registered account found with this email address.');
       }
       if (code === 'auth/invalid-email' || msg.includes('invalid-email')) {
         throw new Error('Please enter a valid email address.');
       }
-      if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized domain')) {
-        throw new Error('Firebase Domain Block: Please add "alumnexa-five.vercel.app" in Firebase Console (Authentication -> Settings -> Authorized Domains).');
+      if (code === 'auth/network-request-failed' || msg.includes('network-request-failed')) {
+        throw new Error(msg || 'Network connection failed. Please check your internet connection.');
       }
       if (code === 'auth/too-many-requests') {
-        throw new Error('Too many requests. Firebase has temporarily throttled emails. Please wait a few minutes.');
+        throw new Error(msg || 'Too many requests. Firebase has temporarily throttled emails. Please wait a few moments.');
       }
-      throw new Error(msg || 'Firebase could not send the reset email. Please verify Firebase project settings.');
+      if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized domain')) {
+        throw new Error('Domain not authorized in Firebase Console: Please add your domain to Authentication -> Settings -> Authorized Domains.');
+      }
+      throw new Error(msg || 'Failed to send password reset email. Please check your project settings.');
     }
-  },
-
-  async resetPasswordDirectly(email: string, newPassword: string): Promise<{ success: boolean; message: string }> {
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) throw new Error('Please enter your collegiate email address.');
-    if (!newPassword || newPassword.length < 6) throw new Error('New password must be at least 6 characters.');
-
-    const allUsers = getAllUsers();
-    const userIndex = allUsers.findIndex(u => u.email.toLowerCase() === cleanEmail);
-    if (userIndex !== -1) {
-      saveUsers(allUsers);
-    }
-    return {
-      success: true,
-      message: 'Password successfully updated! You can now log in.'
-    };
   },
 
   switchRole(_targetRole: UserRole, _specificUserId?: string): User | null {
