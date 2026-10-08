@@ -45,13 +45,12 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
   });
 
   // Faculty Department options (Requirement 4)
-  const [facultyDept, setFacultyDept] = useState<'Information Technology Department' | 'Self Finance Department'>('Information Technology Department');
+  const [facultyDept, setFacultyDept] = useState<'Information Technology Department' | 'Self Finance Department' | 'Commerce Department'>('Information Technology Department');
 
   // Student Year selection (Requirement 3: FY, SY, TY)
   const [studentYear, setStudentYear] = useState<'FY' | 'SY' | 'TY'>('FY');
 
   // Shared academic fields
-  const [department, setDepartment] = useState('');
   const [course, setCourse] = useState('');
   const [graduationYear, setGraduationYear] = useState(String(new Date().getFullYear()));
   const [company, setCompany] = useState('');
@@ -119,7 +118,7 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
       const verificationStatus = isOtherCollege ? ('VERIFIED' as const) : ('PENDING' as const);
 
       // Validate inputs based on role
-      let finalDepartment = department.trim();
+      let finalDepartment: string | undefined = undefined;
       let finalGradYear: number | undefined;
 
       if (selectedRole === 'FACULTY') {
@@ -129,15 +128,9 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
         finalDepartment = facultyDept;
         finalGradYear = undefined;
       } else if (selectedRole === 'STUDENT') {
-        if (!finalDepartment) {
-          throw new Error('Please enter your academic department (e.g. Information Technology, Commerce).');
-        }
         const currentYear = new Date().getFullYear();
         finalGradYear = studentYear === 'TY' ? currentYear : studentYear === 'SY' ? currentYear + 1 : currentYear + 2;
       } else if (selectedRole === 'ALUMNI') {
-        if (!finalDepartment) {
-          throw new Error('Please enter your academic department.');
-        }
         if (!graduationYear.trim()) {
           throw new Error('Please enter your passing / graduation year.');
         }
@@ -151,13 +144,16 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
             institutionId: instId,
             institutionName: instName,
             role: selectedRole,
-            department: finalDepartment,
             isOnboardingComplete: true,
             isVerified,
             verificationStatus,
             isFreeUser: isOtherCollege,
             campusType
           };
+
+          if (finalDepartment) {
+            firestoreUpdates.department = finalDepartment;
+          }
 
           if (selectedRole === 'STUDENT') {
             firestoreUpdates.classYear = studentYear;
@@ -210,8 +206,8 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F242D]/80 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl border border-[#E6E1D7] w-full max-w-lg my-auto max-h-[92vh] flex flex-col relative overflow-hidden animate-in zoom-in-95">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1F242D]/80 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+      <div className="bg-white rounded-3xl shadow-2xl border border-[#E6E1D7] w-full max-w-lg max-h-[90vh] flex flex-col relative overflow-hidden my-auto animate-in zoom-in-95">
         
         {/* Banner Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-br from-[#FAF8F5] to-[#F2EFE8] border-b border-[#E6E1D7] flex items-center justify-between shrink-0">
@@ -411,10 +407,11 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
                 <p className="text-[11px] text-[#565D6D] mb-3">
                   Please choose your official academic department at DTSS College of Commerce:
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="space-y-2">
                   {[
                     'Information Technology Department',
-                    'Self Finance Department'
+                    'Self Finance Department',
+                    'Commerce Department'
                   ].map(dept => {
                     const isSelected = facultyDept === dept;
                     return (
@@ -422,7 +419,7 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
                         key={dept}
                         type="button"
                         onClick={() => setFacultyDept(dept as any)}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                        className={`w-full p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
                           isSelected
                             ? 'bg-[#1F242D] text-white border-[#1F242D] shadow-xs'
                             : 'bg-white text-[#1F242D] border-[#DCD6C9] hover:bg-[#F4F1EA]'
@@ -481,20 +478,6 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
                 </div>
               </div>
 
-              {/* Department */}
-              <div>
-                <label className="block text-[10px] font-semibold text-[#565D6D] mb-1">
-                  Department / Stream <span className="text-[#991B1B]">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={department}
-                  onChange={e => setDepartment(e.target.value)}
-                  placeholder="e.g. Information Technology, Commerce, Management"
-                  className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D] focus:outline-none focus:border-[#1F242D]"
-                />
-              </div>
 
               {/* Degree / Course Program */}
               <div>
@@ -554,21 +537,7 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
                 <span>Alumni Academic & Professional Details</span>
               </span>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-semibold text-[#565D6D] mb-1">
-                    Department <span className="text-[#991B1B]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={department}
-                    onChange={e => setDepartment(e.target.value)}
-                    placeholder="e.g. Information Technology"
-                    className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D]"
-                  />
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-semibold text-[#565D6D] mb-1">
                     Passing / Graduation Year <span className="text-[#991B1B]">*</span>
@@ -582,19 +551,19 @@ export const JoinCampusModal: React.FC<JoinCampusModalProps> = ({
                     className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D]"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-[10px] font-semibold text-[#565D6D] mb-1">
-                  Degree / Course Program
-                </label>
-                <input
-                  type="text"
-                  value={course}
-                  onChange={e => setCourse(e.target.value)}
-                  placeholder="e.g. BSc IT, B.Com"
-                  className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D]"
-                />
+                <div>
+                  <label className="block text-[10px] font-semibold text-[#565D6D] mb-1">
+                    Degree / Course Program
+                  </label>
+                  <input
+                    type="text"
+                    value={course}
+                    onChange={e => setCourse(e.target.value)}
+                    placeholder="e.g. BSc IT, B.Com"
+                    className="w-full px-3 py-2 rounded-xl border border-[#DCD6C9] bg-white text-xs text-[#1F242D]"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
