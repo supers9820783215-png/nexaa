@@ -794,31 +794,33 @@ export const authService = {
     if (!cleanEmail) {
       throw new Error('Please enter a valid email address.');
     }
+    console.log('[Firebase Auth] Initiating sendPasswordResetEmail for:', cleanEmail);
     try {
       await sendPasswordResetEmail(auth, cleanEmail);
+      console.log('[Firebase Auth] sendPasswordResetEmail successfully dispatched to:', cleanEmail);
       return {
         success: true,
-        message: 'Password reset link sent to your registered email. Please check your inbox and spam folder.'
+        message: 'Password reset link sent to your registered email! Please check your inbox and spam/junk folder.'
       };
     } catch (err: any) {
-      console.error('[AuthService] Firebase sendPasswordResetEmail error:', err);
+      console.error('[Firebase Auth] sendPasswordResetEmail error:', err?.code, err?.message, err);
       const code = err?.code || '';
       const msg = err?.message || '';
 
       if (code === 'auth/user-not-found' || msg.includes('user-not-found')) {
-        throw new Error('No registered account found with this email address.');
+        throw new Error('No registered account found with this email in Firebase Authentication. Please verify your email or sign up.');
       }
       if (code === 'auth/invalid-email' || msg.includes('invalid-email')) {
         throw new Error('Please enter a valid email address.');
       }
       if (code === 'auth/network-request-failed' || msg.includes('network-request-failed')) {
-        throw new Error(msg || 'Network connection failed. Please check your internet connection.');
+        throw new Error('Network connection failed. Please check your internet connection.');
       }
       if (code === 'auth/too-many-requests') {
-        throw new Error(msg || 'Too many requests. Firebase has temporarily throttled emails. Please wait a few moments.');
+        throw new Error('Too many requests. Firebase has temporarily throttled emails. Please wait a few moments before trying again.');
       }
       if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized domain')) {
-        throw new Error('Domain not authorized in Firebase Console: Please add your domain to Authentication -> Settings -> Authorized Domains.');
+        throw new Error('Domain not authorized in Firebase Console: Please add your current domain to Authentication -> Settings -> Authorized Domains.');
       }
       throw new Error(msg || 'Failed to send password reset email. Please check your project settings.');
     }

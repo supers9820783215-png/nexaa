@@ -98,7 +98,7 @@ export const RoleDashboardView: React.FC<RoleDashboardViewProps> = ({ onNavigate
       setPendingUsers(pendingUsersList);
 
       if (user) {
-        const reqs = await mentorshipService.getRequestsForUser(user.id, user.role);
+        const reqs = await mentorshipService.getRequestsForUser(user.id || user.uid, user.role);
         setMentorshipRequests(reqs);
       }
     } finally {
@@ -421,7 +421,7 @@ export const RoleDashboardView: React.FC<RoleDashboardViewProps> = ({ onNavigate
                   {mentors.map((m, idx) => (
                     <div key={m.id || m.uid || `mentor-${idx}`} className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <img src={m.avatar} alt={m.name} className="w-11 h-11 rounded-xl object-cover border border-[#E6E1D7]" />
+                        <UserAvatar name={m.name} size="md" className="w-11 h-11 text-base shadow-xs" />
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-[#1F242D]">{m.name}</span>
@@ -586,7 +586,7 @@ export const RoleDashboardView: React.FC<RoleDashboardViewProps> = ({ onNavigate
               {mentorshipRequests.slice(0, 2).map((req, idx) => (
                 <div key={req.id || `mnt-${idx}`} className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <img src={req.menteeAvatar} alt={req.menteeName} className="w-11 h-11 rounded-xl object-cover border border-[#E6E1D7]" />
+                    <UserAvatar name={req.menteeName} size="md" className="w-11 h-11 text-base shadow-xs" />
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-[#1F242D]">{req.menteeName}</span>

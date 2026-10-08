@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface UserAvatarProps {
   name?: string;
@@ -9,58 +9,62 @@ interface UserAvatarProps {
 
 const sizeClasses = {
   xs: 'w-6 h-6 text-[10px]',
-  sm: 'w-7 h-7 text-xs',
-  md: 'w-9 h-9 text-sm',
+  sm: 'w-8 h-8 text-xs',
+  md: 'w-10 h-10 text-sm',
   lg: 'w-12 h-12 text-base',
   xl: 'w-16 h-16 text-xl',
 };
 
-// Generates a consistent, academic-palette color based on the user's initial
-const getInitialColor = (initial: string) => {
-  const colors = [
-    'bg-[#5A7458] text-white border-[#4A6048]', // DTSS Forest Sage
-    'bg-[#2A537A] text-white border-[#1F3E5C]', // Executive Collegiate Blue
-    'bg-[#553E7A] text-white border-[#3F2E5C]', // Academic Plum
-    'bg-[#784433] text-white border-[#5A3326]', // Warm Terracotta
-    'bg-[#345932] text-white border-[#274426]', // Deep Pine
-    'bg-[#1F242D] text-white border-[#343A46]', // Slate Charcoal
-  ];
-  const charCode = initial.charCodeAt(0) || 0;
-  return colors[charCode % colors.length];
+export const getInitials = (name?: string): string => {
+  if (!name || !name.trim()) return 'U';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+};
+
+// Modern vibrant colored background palette
+const colorPalette = [
+  'bg-emerald-600 border-emerald-700',
+  'bg-blue-600 border-blue-700',
+  'bg-indigo-600 border-indigo-700',
+  'bg-violet-600 border-violet-700',
+  'bg-purple-600 border-purple-700',
+  'bg-rose-600 border-rose-700',
+  'bg-amber-600 border-amber-700',
+  'bg-teal-600 border-teal-700',
+  'bg-cyan-600 border-cyan-700',
+  'bg-[#2A537A] border-[#1F3E5C]',
+  'bg-[#5A7458] border-[#4A6048]',
+];
+
+export const getInitialColor = (name?: string): string => {
+  const str = (name || 'U').trim();
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colorPalette.length;
+  return colorPalette[index];
 };
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   name = 'User',
-  avatar,
   size = 'sm',
   className = '',
 }) => {
-  const [imgError, setImgError] = useState(false);
-  const initial = (name.trim().charAt(0) || 'U').toUpperCase();
-
-  // Treat dummy Unsplash stock photos as empty so genuine initials are shown
-  const isDummyPhoto = !avatar || avatar.includes('unsplash.com') || avatar.trim() === '';
-
-  if (!isDummyPhoto && !imgError) {
-    return (
-      <img
-        src={avatar}
-        alt={name}
-        onError={() => setImgError(true)}
-        className={`${sizeClasses[size]} rounded-lg object-cover border border-[#E6E1D7] shrink-0 ${className}`}
-      />
-    );
-  }
-
-  const colorClass = getInitialColor(initial);
+  const initials = getInitials(name);
+  const colorClass = getInitialColor(name);
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-lg ${colorClass} font-bold flex items-center justify-center shrink-0 border select-none shadow-2xs ${className}`}
+      className={`${sizeClasses[size]} rounded-full ${colorClass} text-white font-bold flex items-center justify-center shrink-0 border select-none shadow-sm ${className}`}
       title={name}
       aria-label={name}
     >
-      <span>{initial}</span>
+      <span className="tracking-wider">{initials}</span>
     </div>
   );
 };

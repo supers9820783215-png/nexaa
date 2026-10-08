@@ -16,7 +16,7 @@ import {
   ExternalLink,
   ShieldCheck,
   HeartHandshake
-} from 'lucide-react';
+import { UserAvatar } from './common/UserAvatar.tsx';
 
 interface AlumniDetailModalProps {
   alumni: (AlumniDirectoryItem & { postedOpportunities?: Opportunity[] }) | null;
@@ -101,10 +101,10 @@ export const AlumniDetailModal: React.FC<AlumniDetailModalProps> = ({
         <div className="px-6 pb-6 relative pt-0">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between -mt-12 mb-4 gap-4">
             <div className="flex items-end gap-4">
-              <img
-                src={alumni.profile_image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-                alt={alumni.name}
-                className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-md bg-[#E5EAF5]"
+              <UserAvatar
+                name={alumni.name}
+                size="xl"
+                className="w-24 h-24 text-3xl border-4 border-white shadow-md"
               />
               <div className="mb-1">
                 <div className="flex items-center gap-2 flex-wrap">

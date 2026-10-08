@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { networkService, ConnectionRecord } from '../services/networkService.ts';
 import { UserUIDBadge } from '../components/common/UserUIDBadge.tsx';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import { LoadingState, EmptyState } from '../components/common/StateFeedback.tsx';
 import {
   Users,
@@ -166,10 +167,10 @@ export const MyNetworkView: React.FC<MyNetworkViewProps> = ({ onOpenAuth, onNavi
                     <div>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={item.user.avatar}
-                            alt={item.user.name}
-                            className="w-12 h-12 rounded-xl object-cover border border-[#E6E1D7]"
+                          <UserAvatar
+                            name={item.user.name}
+                            size="md"
+                            className="w-12 h-12 text-base shadow-xs"
                           />
                           <div>
                             <h3 className="text-sm font-bold text-[#1F242D]">{item.user.name}</h3>
@@ -222,10 +223,10 @@ export const MyNetworkView: React.FC<MyNetworkViewProps> = ({ onOpenAuth, onNavi
                     className="p-4 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={item.user.avatar}
-                        alt={item.user.name}
-                        className="w-12 h-12 rounded-xl object-cover border border-[#E6E1D7]"
+                      <UserAvatar
+                        name={item.user.name}
+                        size="md"
+                        className="w-12 h-12 text-base shadow-xs"
                       />
                       <div>
                         <div className="flex items-center gap-2">
@@ -272,10 +273,10 @@ export const MyNetworkView: React.FC<MyNetworkViewProps> = ({ onOpenAuth, onNavi
                     className="p-4 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src={item.user.avatar}
-                        alt={item.user.name}
-                        className="w-12 h-12 rounded-xl object-cover border border-[#E6E1D7]"
+                      <UserAvatar
+                        name={item.user.name}
+                        size="md"
+                        className="w-12 h-12 text-base shadow-xs"
                       />
                       <div>
                         <div className="flex items-center gap-2">

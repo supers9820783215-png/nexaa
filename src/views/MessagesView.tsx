@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { messageService, ChatConversation, ChatMessage } from '../services/messageService.ts';
 import { userService } from '../services/userService.ts';
 import { UserUIDBadge } from '../components/common/UserUIDBadge.tsx';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import { LoadingState } from '../components/common/StateFeedback.tsx';
 import {
   MessageSquare,
@@ -220,10 +221,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({ onOpenAuth, onNaviga
                       isActive ? 'bg-[#F2EFE9]' : 'hover:bg-[#F7F5F0]'
                     }`}
                   >
-                    <img
-                      src={conv.partner.avatar}
-                      alt={conv.partner.name}
-                      className="w-10 h-10 rounded-xl object-cover border border-[#E6E1D7] shrink-0"
+                    <UserAvatar
+                      name={conv.partner.name}
+                      size="md"
+                      className="w-10 h-10 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
@@ -255,10 +256,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({ onOpenAuth, onNaviga
               {/* Chat Header */}
               <div className="p-3.5 border-b border-[#E6E1D7] bg-[#FAF8F5] flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={activePartner.partner.avatar}
-                    alt={activePartner.partner.name}
-                    className="w-9 h-9 rounded-xl object-cover border border-[#E6E1D7]"
+                  <UserAvatar
+                    name={activePartner.partner.name}
+                    size="md"
+                    className="w-9 h-9"
                   />
                   <div>
                     <div className="flex items-center gap-2">

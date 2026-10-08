@@ -32,11 +32,8 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Single Unified Search Query across all fields
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<EventType | 'ALL'>('ALL');
-  const [timeframeFilter, setTimeframeFilter] = useState<'ALL' | 'UPCOMING' | 'PAST'>('UPCOMING');
-  const [formatFilter, setFormatFilter] = useState<'ALL' | 'ONLINE' | 'IN_PERSON'>('ALL');
 
   // Detail Modal
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
@@ -62,9 +59,6 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
     try {
       const list = await eventService.getEvents({
         search,
-        type: typeFilter,
-        timeframe: timeframeFilter,
-        format: formatFilter
       });
       setEvents(list);
     } catch (err) {
@@ -72,7 +66,7 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
     } finally {
       setLoading(false);
     }
-  }, [search, typeFilter, timeframeFilter, formatFilter]);
+  }, [search]);
 
   useEffect(() => {
     fetchEvents();
@@ -169,65 +163,38 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
         </div>
       </div>
 
-      {/* Filter Panel */}
-      <div className="p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs space-y-4">
-        {/* Search */}
+      {/* Unified Single Search Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs">
         <div className="relative">
-          <Search className="w-4 h-4 text-[#7E8696] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-5 h-5 text-[#7E8696] absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search events by title, topic, or speaker..."
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
+            placeholder="Search events by title, venue, topic, speaker, or date (e.g. 2026-06-15)..."
+            className="w-full pl-12 pr-10 py-3 text-sm rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] placeholder-[#7E8696] focus:outline-hidden focus:border-[#5A7458] shadow-inner transition-all"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696] hover:text-[#1F242D] transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-
-        {/* Dropdowns */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Event Type</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as any)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+        {search && (
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#E6E1D7] text-xs text-[#565D6D]">
+            <span>Showing events matching &ldquo;<span className="font-semibold text-[#1F242D]">{search}</span>&rdquo;</span>
+            <button
+              onClick={() => setSearch('')}
+              className="text-[#5A7458] hover:underline font-semibold cursor-pointer"
             >
-              <option value="ALL">All Formats</option>
-              <option value="WEBINAR">Webinar</option>
-              <option value="WORKSHOP">Workshop</option>
-              <option value="MEETUP">Meetup</option>
-              <option value="COLLEGE_EVENT">Campus Drive</option>
-              <option value="CAREER_EVENT">Reunion</option>
-              <option value="MENTORSHIP_SESSION">Mentorship Session</option>
-            </select>
+              Clear filter
+            </button>
           </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Schedule</label>
-            <select
-              value={timeframeFilter}
-              onChange={(e) => setTimeframeFilter(e.target.value as any)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-            >
-              <option value="UPCOMING">Upcoming Events</option>
-              <option value="PAST">Past Archives</option>
-              <option value="ALL">All Events</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Format</label>
-            <select
-              value={formatFilter}
-              onChange={(e) => setFormatFilter(e.target.value as any)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-            >
-              <option value="ALL">All Formats</option>
-              <option value="ONLINE">Virtual / Online</option>
-              <option value="IN_PERSON">In-Person Campus</option>
-            </select>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Events Grid */}

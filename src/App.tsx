@@ -220,8 +220,8 @@ function MainLayout() {
             onOpenAuth={(mode) => handleOpenAuth(mode || 'register')}
           />
         )}
-        {activeTab === 'directory' && <DirectoryView onOpenAuth={() => handleOpenAuth('login')} />}
-        {activeTab === 'mentorship' && <MentorshipView onOpenAuth={() => handleOpenAuth('login')} />}
+        {activeTab === 'directory' && <DirectoryView onOpenAuth={() => handleOpenAuth('login')} onNavigate={navigateTo} />}
+        {activeTab === 'mentorship' && <MentorshipView onOpenAuth={() => handleOpenAuth('login')} onNavigate={navigateTo} />}
         {activeTab === 'opportunities' && <OpportunitiesView onOpenAuth={() => handleOpenAuth('login')} />}
         {activeTab === 'events' && <EventsView onOpenAuth={() => handleOpenAuth('login')} />}
         {activeTab === 'network' && <MyNetworkView onOpenAuth={() => handleOpenAuth('login')} />}

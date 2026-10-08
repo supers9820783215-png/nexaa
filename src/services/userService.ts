@@ -69,11 +69,15 @@ export const userService = {
     }
 
     if (params.search) {
-      const q = params.search.toLowerCase();
+      const q = params.search.toLowerCase().trim();
       alumni = alumni.filter(a =>
-        a.name.toLowerCase().includes(q) ||
-        a.uid.toLowerCase().includes(q) ||
+        (a.name && a.name.toLowerCase().includes(q)) ||
+        (a.uid && a.uid.toLowerCase().includes(q)) ||
         (a.company && a.company.toLowerCase().includes(q)) ||
+        (a.currentRole && a.currentRole.toLowerCase().includes(q)) ||
+        (a.department && a.department.toLowerCase().includes(q)) ||
+        (a.location && a.location.toLowerCase().includes(q)) ||
+        (a.graduationYear && a.graduationYear.toString().includes(q)) ||
         (a.institutionName && a.institutionName.toLowerCase().includes(q)) ||
         (a.skills && a.skills.some(s => s.toLowerCase().includes(q)))
       );

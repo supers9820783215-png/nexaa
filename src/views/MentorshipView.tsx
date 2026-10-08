@@ -3,6 +3,7 @@ import { User, MentorshipRequest, MentorshipStatus } from '../types.ts';
 import { mentorshipService, MentorFilterParams } from '../services/mentorshipService.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LoadingState, EmptyState } from '../components/common/StateFeedback.tsx';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import {
   HeartHandshake,
   Search,
@@ -26,21 +27,18 @@ import {
 
 interface MentorshipViewProps {
   onOpenAuth: () => void;
+  onNavigate?: (tab: string, extraData?: any) => void;
 }
 
-export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) => {
+export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNavigate }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'find-mentors' | 'requests'>('find-mentors');
   const [mentors, setMentors] = useState<Array<User & { activeMentees: number; mentorshipAvailability: boolean; experienceYears: number; industry: string }>>([]);
   const [requests, setRequests] = useState<MentorshipRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Unified Search Query across all fields
   const [search, setSearch] = useState('');
-  const [selectedIndustry, setSelectedIndustry] = useState('ALL');
-  const [selectedCompany, setSelectedCompany] = useState('ALL');
-  const [selectedLocation, setSelectedLocation] = useState('ALL');
-  const [skillInput, setSkillInput] = useState('');
 
   // Request Mentorship Modal
   const [targetMentor, setTargetMentor] = useState<any | null>(null);
@@ -60,10 +58,6 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
     try {
       const list = await mentorshipService.getMentors({
         search,
-        industry: selectedIndustry,
-        company: selectedCompany,
-        location: selectedLocation,
-        skills: skillInput,
       });
       setMentors(list);
     } catch (err) {
@@ -71,12 +65,12 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
     } finally {
       setLoading(false);
     }
-  }, [search, selectedIndustry, selectedCompany, selectedLocation, skillInput]);
+  }, [search]);
 
   const loadRequests = useCallback(async () => {
     if (!user) return;
     try {
-      const list = await mentorshipService.getRequestsForUser(user.id, user.role);
+      const list = await mentorshipService.getRequestsForUser(user.id || user.uid, user.role);
       setRequests(list);
     } catch (err) {
       console.error('Failed to load mentorship requests:', err);
@@ -93,16 +87,16 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
     if (!targetMentor || !user) return;
 
     await mentorshipService.requestMentorship({
-      mentorId: targetMentor.id,
+      mentorId: targetMentor.id || targetMentor.uid,
       mentorName: targetMentor.name,
-      mentorUid: targetMentor.uid,
-      mentorAvatar: targetMentor.avatar,
+      mentorUid: targetMentor.uid || targetMentor.id,
+      mentorAvatar: targetMentor.avatar || '',
       mentorCompany: targetMentor.company || 'Enterprise',
       mentorRole: targetMentor.currentRole || 'Software Professional',
-      menteeId: user.id,
+      menteeId: user.id || user.uid,
       menteeName: user.name,
-      menteeUid: user.uid,
-      menteeAvatar: user.avatar,
+      menteeUid: user.uid || user.id,
+      menteeAvatar: user.avatar || '',
       menteeCourse: user.course || 'BSc Information Technology',
       menteeYear: '3rd Year',
       topic: `${requestTopic} · Goals: ${requestGoals}`,
@@ -185,60 +179,38 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
           ========================================================================= */}
       {activeTab === 'find-mentors' && (
         <div className="space-y-6">
-          {/* Filters Bar */}
-          <div className="p-4 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs space-y-3">
+          {/* Unified Single Search Bar */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs">
             <div className="relative">
-              <Search className="w-4 h-4 text-[#7E8696] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-5 h-5 text-[#7E8696] absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search mentors by name, company, skill or engineering focus..."
-                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
+                placeholder="Search mentors by name, company, role, skills, department, or engineering focus..."
+                className="w-full pl-12 pr-10 py-3 text-sm rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] placeholder-[#7E8696] focus:outline-hidden focus:border-[#5A7458] shadow-inner transition-all"
               />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-              <div>
-                <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Industry</label>
-                <select
-                  value={selectedIndustry}
-                  onChange={(e) => setSelectedIndustry(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696] hover:text-[#1F242D] transition-colors cursor-pointer"
+                  title="Clear search"
                 >
-                  <option value="ALL">All Industries</option>
-                  <option value="Technology">Technology & Software</option>
-                  <option value="AI">AI & Machine Learning</option>
-                  <option value="Fintech">Fintech</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Company</label>
-                <select
-                  value={selectedCompany}
-                  onChange={(e) => setSelectedCompany(e.target.value)}
-                  className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-                >
-                  <option value="ALL">All Companies</option>
-                  <option value="Microsoft">Microsoft</option>
-                  <option value="Google">Google</option>
-                  <option value="Swiggy">Swiggy</option>
-                  <option value="Razorpay">Razorpay</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Skill</label>
-                <input
-                  type="text"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  placeholder="e.g. Distributed Systems"
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-                />
-              </div>
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
+            {search && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#E6E1D7] text-xs text-[#565D6D]">
+                <span>Showing mentors matching &ldquo;<span className="font-semibold text-[#1F242D]">{search}</span>&rdquo;</span>
+                <button
+                  onClick={() => setSearch('')}
+                  className="text-[#5A7458] hover:underline font-semibold cursor-pointer"
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mentors Grid */}
@@ -246,7 +218,7 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
             <LoadingState message="Finding available collegiate mentors..." />
           ) : mentors.length === 0 ? (
             <div className="py-16 text-center text-gray-500 font-medium">
-              No alumni or faculty mentors registered yet.
+              No alumni or faculty mentors found matching your search.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -257,10 +229,10 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
                 >
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-3 mb-3">
-                      <img
-                        src={mentor.avatar}
-                        alt={mentor.name}
-                        className="w-14 h-14 rounded-2xl object-cover border border-[#E6E1D7]"
+                      <UserAvatar
+                        name={mentor.name}
+                        size="lg"
+                        className="w-14 h-14 text-xl"
                       />
                     </div>
 
@@ -294,23 +266,41 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
                     </div>
                   </div>
 
-                  <div className="px-6 py-3 bg-[#FAF8F5] border-t border-[#E6E1D7] flex items-center justify-between">
+                  <div className="px-6 py-3 bg-[#FAF8F5] border-t border-[#E6E1D7] flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                     <span className="text-[11px] font-semibold text-[#345932] flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Accepting Mentees
+                      Accepting
                     </span>
-                    <button
-                      onClick={() => {
-                        if (!user) {
-                          onOpenAuth();
-                          return;
-                        }
-                        setTargetMentor(mentor);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors cursor-pointer"
-                    >
-                      Request Mentorship
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          if (!user) {
+                            onOpenAuth();
+                            return;
+                          }
+                          if (onNavigate) {
+                            onNavigate('messages', { recipientId: mentor.id || mentor.uid, recipientName: mentor.name });
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-[#E6E1D7] bg-white text-[#1F242D] text-xs font-semibold hover:bg-[#F0ECE1] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Send Direct Message to Mentor"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-[#5A7458]" />
+                        <span>Message</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!user) {
+                            onOpenAuth();
+                            return;
+                          }
+                          setTargetMentor(mentor);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors cursor-pointer"
+                      >
+                        Request Mentorship
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -356,10 +346,10 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth }) =>
                     {/* Header: Parties Involved */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E6E1D7] pb-3">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={isAlumni ? req.menteeAvatar : req.mentorAvatar}
-                          alt="Party"
-                          className="w-12 h-12 rounded-xl object-cover border border-[#E6E1D7]"
+                        <UserAvatar
+                          name={isAlumni ? req.menteeName : req.mentorName}
+                          size="md"
+                          className="w-12 h-12 text-base shadow-xs"
                         />
                         <div>
                           <h4 className="text-sm font-bold text-[#1F242D]">

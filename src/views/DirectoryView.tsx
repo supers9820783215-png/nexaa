@@ -3,6 +3,7 @@ import { User, MentorshipRequest } from '../types.ts';
 import { userService } from '../services/userService.ts';
 import { mentorshipService } from '../services/mentorshipService.ts';
 import { useAuth } from '../context/AuthContext.tsx';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import { LoadingState, EmptyState } from '../components/common/StateFeedback.tsx';
 import {
   Search,
@@ -35,16 +36,9 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ onOpenAuth, onNavi
   const [alumni, setAlumni] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Single Unified Search Query across all fields
   const [search, setSearch] = useState('');
-  const [uidQuery, setUidQuery] = useState('');
   const isUnverified = Boolean(user && (!user.isVerified || user.verificationStatus !== 'VERIFIED'));
-  const [selectedCompany, setSelectedCompany] = useState('ALL');
-  const [selectedIndustry, setSelectedIndustry] = useState('ALL');
-  const [selectedYear, setSelectedYear] = useState('ALL');
-  const [selectedDept, setSelectedDept] = useState('ALL');
-  const [selectedLocation, setSelectedLocation] = useState('ALL');
-  const [skillInput, setSkillInput] = useState('');
 
   // Selected for detailed modal
   const [selectedAlumni, setSelectedAlumni] = useState<User | null>(null);
@@ -64,13 +58,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ onOpenAuth, onNavi
     try {
       const res = await userService.getAlumni({
         search,
-        uid: uidQuery,
-        company: selectedCompany,
-        industry: selectedIndustry,
-        graduationYear: selectedYear,
-        department: selectedDept,
-        location: selectedLocation,
-        skills: skillInput,
       });
       setAlumni(res);
     } catch (err) {
@@ -78,16 +65,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ onOpenAuth, onNavi
     } finally {
       setLoading(false);
     }
-  }, [
-    search,
-    uidQuery,
-    selectedCompany,
-    selectedIndustry,
-    selectedYear,
-    selectedDept,
-    selectedLocation,
-    skillInput
-  ]);
+  }, [search]);
 
   useEffect(() => {
     fetchAlumni();
@@ -148,13 +126,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ onOpenAuth, onNavi
 
   const resetFilters = () => {
     setSearch('');
-    setUidQuery('');
-    setSelectedCompany('ALL');
-    setSelectedIndustry('ALL');
-    setSelectedYear('ALL');
-    setSelectedDept('ALL');
-    setSelectedLocation('ALL');
-    setSkillInput('');
   };
 
   return (
@@ -182,136 +153,38 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ onOpenAuth, onNavi
         </div>
       )}
 
-      {/* Filter Panel */}
-      <div className="p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs space-y-4">
-        {/* Row 1: Search and UID input */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-[#7E8696] absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by alumni name, job title, company..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-xs text-[#1F242D] focus:outline-hidden focus:border-[#5A7458]"
-            />
-          </div>
-          <div className="relative">
-            <span className="text-[10px] font-mono text-[#7E8696] absolute left-3 top-1/2 -translate-y-1/2 select-none">
-              UID:
-            </span>
-            <input
-              type="text"
-              value={uidQuery}
-              onChange={(e) => setUidQuery(e.target.value)}
-              placeholder="Filter by exact or partial UID (e.g. AN-ALU-4M8Q21)..."
-              className="w-full pl-12 pr-3 py-2 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-xs font-mono text-[#1F242D] focus:outline-hidden focus:border-[#5A7458]"
-            />
-          </div>
+      {/* Unified Single Search Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs">
+        <div className="relative">
+          <Search className="w-5 h-5 text-[#7E8696] absolute left-4 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search alumni by name, company, role, skills, department, graduation year, location, or UID..."
+            className="w-full pl-12 pr-10 py-3 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-sm text-[#1F242D] placeholder-[#7E8696] focus:outline-hidden focus:border-[#5A7458] shadow-inner transition-all"
+          />
+          {search && (
+            <button
+              onClick={resetFilters}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696] hover:text-[#1F242D] transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
-
-        {/* Row 2: Dropdowns */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs">
-
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Company</label>
-            <select
-              value={selectedCompany}
-              onChange={(e) => setSelectedCompany(e.target.value)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+        {search && (
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#E6E1D7] text-xs text-[#565D6D]">
+            <span>Showing results matching &ldquo;<span className="font-semibold text-[#1F242D]">{search}</span>&rdquo; across all fields</span>
+            <button
+              onClick={resetFilters}
+              className="text-[#5A7458] hover:underline font-semibold cursor-pointer"
             >
-              <option value="ALL">All Companies</option>
-              <option value="Microsoft">Microsoft</option>
-              <option value="Google">Google</option>
-              <option value="Swiggy">Swiggy</option>
-              <option value="Razorpay">Razorpay</option>
-              <option value="CRED">CRED</option>
-              <option value="J.P. Morgan">J.P. Morgan</option>
-            </select>
+              Clear filter
+            </button>
           </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Industry</label>
-            <select
-              value={selectedIndustry}
-              onChange={(e) => setSelectedIndustry(e.target.value)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-            >
-              <option value="ALL">All Industries</option>
-              <option value="Technology">Technology & Software</option>
-              <option value="Artificial Intelligence">AI & Machine Learning</option>
-              <option value="Fintech">Fintech & Payments</option>
-              <option value="Investment Banking">Banking & Finance</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Graduation Year</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-            >
-              <option value="ALL">All Years</option>
-              <option value="2018">2018</option>
-              <option value="2019">2019</option>
-              <option value="2020">2020</option>
-              <option value="2021">2021</option>
-              <option value="2022">2022</option>
-              <option value="2023">2023</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Department</label>
-            <select
-              value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-            >
-              <option value="ALL">All Departments</option>
-              <option value="Information Technology">Information Technology</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Computer Engineering">Computer Engineering</option>
-              <option value="Management Studies">Management Studies</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Location</label>
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full px-2 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
-            >
-              <option value="ALL">All Locations</option>
-              <option value="Mumbai">Mumbai</option>
-              <option value="Bengaluru">Bengaluru</option>
-              <option value="Hyderabad">Hyderabad</option>
-              <option value="Remote">Remote</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Row 3: Skills filter + Clear */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#E6E1D7]">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <span className="text-[10px] font-semibold text-[#7E8696] uppercase">Skill Tag:</span>
-            <input
-              type="text"
-              value={skillInput}
-              onChange={(e) => setSkillInput(e.target.value)}
-              placeholder="e.g. Distributed Systems, React, Python..."
-              className="px-2.5 py-1 text-xs rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] flex-1 text-[#1F242D]"
-            />
-          </div>
-          <button
-            onClick={resetFilters}
-            className="text-xs font-semibold text-[#7E8696] hover:text-[#1F242D] underline cursor-pointer"
-          >
-            Reset All Filters
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Main Alumni Cards Grid */}
@@ -334,10 +207,10 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ onOpenAuth, onNavi
                 <div className="p-6">
                   {/* Card Header: Avatar */}
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <img
-                      src={alumnus.avatar}
-                      alt={alumnus.name}
-                      className="w-14 h-14 rounded-2xl object-cover border border-[#E6E1D7] shrink-0"
+                    <UserAvatar
+                      name={alumnus.name}
+                      size="lg"
+                      className="w-14 h-14 text-xl"
                     />
                   </div>
 
@@ -457,10 +330,10 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ onOpenAuth, onNavi
           <div className="w-full max-w-2xl rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-[#E6E1D7] bg-[#FAF8F5] flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <img
-                  src={selectedAlumni.avatar}
-                  alt={selectedAlumni.name}
-                  className="w-16 h-16 rounded-2xl object-cover border border-[#E6E1D7]"
+                <UserAvatar
+                  name={selectedAlumni.name}
+                  size="xl"
+                  className="w-16 h-16 text-2xl border border-[#E6E1D7]"
                 />
                 <div>
                   <h2 className="text-lg font-bold text-[#1F242D]">{selectedAlumni.name}</h2>

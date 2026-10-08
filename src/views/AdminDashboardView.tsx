@@ -6,6 +6,7 @@ import { getAllUsers } from '../services/authService.ts';
 import { institutionService } from '../services/institutionService.ts';
 import { eventService } from '../services/eventService.ts';
 import { EventItem } from '../types.ts';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import {
   ShieldAlert,
   Users,
@@ -406,10 +407,10 @@ export const AdminDashboardView: React.FC = () => {
                 className="bg-white p-5 rounded-3xl border border-[#E5EAF5] hover:border-[#D0BDF4] shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all"
               >
                 <div className="flex items-start gap-4">
-                  <img
-                    src={alum.avatar || alum.profile_image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120'}
-                    alt={alum.name}
-                    className="w-13 h-13 rounded-2xl object-cover border border-[#D0BDF4]/40 bg-[#E5EAF5]"
+                  <UserAvatar
+                    name={alum.name}
+                    size="lg"
+                    className="w-13 h-13 text-xl shadow-xs"
                   />
                   <div>
                     <div className="flex items-center gap-2">
@@ -560,10 +561,9 @@ export const AdminDashboardView: React.FC = () => {
                       <tr key={item.id} className="hover:bg-[#E5EAF5]/20 transition-colors">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={item.avatar || item.profile_image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60'}
-                              alt={item.name}
-                              className="w-8 h-8 rounded-full object-cover border border-[#D0BDF4]/40"
+                            <UserAvatar
+                              name={item.name}
+                              size="sm"
                             />
                             <div>
                               <p className="font-bold text-[#494D5F]">{item.name}</p>

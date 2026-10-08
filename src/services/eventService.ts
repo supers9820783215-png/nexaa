@@ -66,12 +66,15 @@ export const eventService = {
     }
 
     if (filter.search) {
-      const q = filter.search.toLowerCase();
+      const q = filter.search.toLowerCase().trim();
       list = list.filter(e =>
-        e.title.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q) ||
-        e.organizer.toLowerCase().includes(q) ||
-        e.speakers?.some(s => s.name.toLowerCase().includes(q))
+        (e.title && e.title.toLowerCase().includes(q)) ||
+        (e.description && e.description.toLowerCase().includes(q)) ||
+        (e.location && e.location.toLowerCase().includes(q)) ||
+        (e.date && e.date.toLowerCase().includes(q)) ||
+        (e.eventType && e.eventType.toLowerCase().includes(q)) ||
+        (e.organizer && e.organizer.toLowerCase().includes(q)) ||
+        (e.speakers && e.speakers.some(s => s.name?.toLowerCase().includes(q)))
       );
     }
 

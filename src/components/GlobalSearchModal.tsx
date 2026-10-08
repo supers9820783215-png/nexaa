@@ -4,6 +4,7 @@ import { opportunityService } from '../services/opportunityService.ts';
 import { eventService } from '../services/eventService.ts';
 import { User, Opportunity, EventItem } from '../types.ts';
 import { UserUIDBadge } from './common/UserUIDBadge.tsx';
+import { UserAvatar } from './common/UserAvatar.tsx';
 import {
   Search,
   X,
@@ -199,7 +200,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                     className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] hover:border-[#DCD6C9] transition-all flex items-center justify-between cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <img src={u.avatar} alt={u.name} className="w-9 h-9 rounded-xl object-cover border border-[#E6E1D7]" />
+                      <UserAvatar name={u.name} size="md" />
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-[#1F242D]">{u.name}</span>
