@@ -5,33 +5,27 @@ import { getAllUsers } from '../services/authService.ts';
 import { userService } from '../services/userService.ts';
 import { UserUIDBadge } from '../components/common/UserUIDBadge.tsx';
 import { UserAvatar } from '../components/common/UserAvatar.tsx';
-import { LoadingState } from '../components/common/StateFeedback.tsx';
 import {
   MessageSquare,
   Send,
-  User,
-  Clock,
   CheckCheck,
   Search,
-  Building2,
-  ExternalLink,
-  Sparkles,
   Lock,
-  ShieldCheck,
-  AlertTriangle
+  ShieldCheck
 } from 'lucide-react';
 
 interface MessagesViewProps {
   onOpenAuth: () => void;
   onNavigateToProfile?: (uid: string) => void;
   initialPartnerId?: string | null;
+  initialConversationId?: string | null;
   onClearInitialPartner?: () => void;
 }
 
 export const MessagesView: React.FC<MessagesViewProps> = ({
   onOpenAuth,
-  onNavigateToProfile,
   initialPartnerId,
+  initialConversationId,
   onClearInitialPartner
 }) => {
   const { user, updateUser } = useAuth();
@@ -43,20 +37,38 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const [searchFilter, setSearchFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const partnerToSelect = initialPartnerId || (typeof window !== 'undefined' ? sessionStorage.getItem('alumnexa_active_chat_partner') : null);
-    loadConversations(partnerToSelect);
-  }, [user, initialPartnerId]);
+    // Resolve partner and conversation ID from props, URL search parameters, or sessionStorage
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const convIdFromUrl = urlParams?.get('conversationId');
+    const partnerIdFromUrl = urlParams?.get('partnerId');
 
-  async function loadConversations(targetPartnerId?: string | null) {
+    const convIdToSelect = initialConversationId || convIdFromUrl || (typeof window !== 'undefined' ? sessionStorage.getItem('alumnexa_active_conversation_id') : null);
+    const partnerToSelect = initialPartnerId || partnerIdFromUrl || (typeof window !== 'undefined' ? sessionStorage.getItem('alumnexa_active_chat_partner') : null);
+
+    loadConversations(partnerToSelect, convIdToSelect);
+  }, [user, initialPartnerId, initialConversationId]);
+
+  async function loadConversations(targetPartnerId?: string | null, targetConvId?: string | null) {
     if (!user) return;
     setLoading(true);
     try {
       const convs = await messageService.getConversations(user.id);
       let selectedConv: ChatConversation | null = null;
 
-      if (targetPartnerId) {
+      // 1. Try matching by conversationId
+      if (targetConvId) {
+        const cTarget = targetConvId.trim().toLowerCase();
+        selectedConv = convs.find(c =>
+          (c.conversationId || '').toLowerCase() === cTarget ||
+          (c.id || '').toLowerCase() === cTarget
+        ) || null;
+      }
+
+      // 2. If not matched, try matching by partnerId
+      if (!selectedConv && targetPartnerId) {
         const tId = targetPartnerId.trim().toLowerCase();
         selectedConv = convs.find(c =>
           (c.partner.id || '').toLowerCase() === tId ||
@@ -72,6 +84,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           );
           if (targetUser) {
             selectedConv = {
+              id: targetConvId || `conv_${[user.id, targetUser.id].sort().join('___')}`,
+              conversationId: targetConvId || `conv_${[user.id, targetUser.id].sort().join('___')}`,
               partner: targetUser,
               lastMessage: 'Conversation active.',
               lastMessageTime: 'Just now',
@@ -88,7 +102,11 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         setActivePartner(selectedConv);
         loadMessages(selectedConv.partner.id);
         sessionStorage.removeItem('alumnexa_active_chat_partner');
+        sessionStorage.removeItem('alumnexa_active_conversation_id');
         if (onClearInitialPartner) onClearInitialPartner();
+        setTimeout(() => {
+          chatInputRef.current?.focus();
+        }, 200);
       } else if (convs.length > 0 && !activePartner) {
         setActivePartner(convs[0]);
         loadMessages(convs[0].partner.id);
@@ -110,13 +128,22 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   const handleSelectConversation = (conv: ChatConversation) => {
     setActivePartner(conv);
     loadMessages(conv.partner.id);
+    setTimeout(() => {
+      chatInputRef.current?.focus();
+    }, 150);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !user || !activePartner) return;
 
-    const newMsg = await messageService.sendMessage(user.id, activePartner.partner.id, inputText.trim());
+    const newMsg = await messageService.sendMessage(
+      user.id,
+      activePartner.partner.id,
+      inputText.trim(),
+      activePartner.conversationId || activePartner.id
+    );
+
     setMessages(prev => [...prev, newMsg]);
     setInputText('');
 
@@ -131,18 +158,19 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      chatInputRef.current?.focus();
     }, 100);
   };
 
   if (!user) {
     return (
-      <div className="max-w-xl mx-auto py-20 px-4 text-center space-y-4">
-        <MessageSquare className="w-12 h-12 text-[#7E8696] mx-auto" />
+      <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-4">
+        <MessageSquare className="w-10 h-10 text-[#7E8696] mx-auto" />
         <h2 className="text-xl font-bold text-[#1F242D]">Sign In to Open Inbox</h2>
         <p className="text-xs text-[#565D6D]">Send direct messages and coordinate mentorship sessions with verified members.</p>
         <button
           onClick={onOpenAuth}
-          className="px-5 py-2.5 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46]"
+          className="px-4 py-2 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46]"
         >
           Sign In
         </button>
@@ -166,9 +194,9 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
 
   if (user.role !== 'SUPER_ADMIN' && user.role !== 'INSTITUTION_ADMIN' && (!user.isVerified || user.verificationStatus !== 'VERIFIED')) {
     return (
-      <div className="max-w-2xl mx-auto py-16 px-4 text-center space-y-5">
-        <div className="w-16 h-16 rounded-2xl bg-[#FFF5F2] border border-[#FED7AA] flex items-center justify-center mx-auto text-[#EA580C] shadow-xs">
-          <Lock className="w-8 h-8" />
+      <div className="max-w-xl mx-auto py-12 px-4 text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-[#FFF5F2] border border-[#FED7AA] flex items-center justify-center mx-auto text-[#EA580C] shadow-xs">
+          <Lock className="w-7 h-7" />
         </div>
         <div>
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -181,10 +209,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               verificationStatus={user.verificationStatus}
             />
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#1F242D] tracking-tight font-heading">
+          <h2 className="text-xl font-bold text-[#1F242D] tracking-tight">
             Direct Messaging Requires Institutional Verification
           </h2>
-          <p className="text-xs sm:text-sm text-[#565D6D] max-w-lg mx-auto mt-2 leading-relaxed">
+          <p className="text-xs text-[#565D6D] max-w-md mx-auto mt-1.5 leading-relaxed">
             {user.verificationStatus === 'PENDING'
               ? `Your verification request has been submitted to ${user.institutionName || 'your institution'} and is currently awaiting administrator review. Direct messaging will unlock once approved.`
               : `To preserve high-trust communication across ${user.institutionName || 'collegiate'} networks and prevent unauthorized outreach, direct messaging is restricted to verified campus members.`}
@@ -192,11 +220,11 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
         </div>
 
         {user.verificationStatus !== 'PENDING' && (
-          <div className="pt-2">
+          <div className="pt-1">
             <button
               onClick={handleRequestVerification}
               disabled={requestingVerification}
-              className="px-5 py-2.5 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-bold transition-all shadow-xs inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>{requestingVerification ? 'Submitting Request...' : 'Request for Verification'}</span>
@@ -213,36 +241,36 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-4">
       {/* Header */}
-      <div className="border-b border-[#E6E1D7] pb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-bold text-[#5A7458] uppercase tracking-wider">
+      <div className="border-b border-[#E6E1D7] pb-3">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="text-[11px] font-bold text-[#5A7458] uppercase tracking-wider">
             Verified Messaging
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#EBF2EA] text-[#345932] border border-[#CFE2CD]">
+          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#EBF2EA] text-[#345932] border border-[#CFE2CD]">
             END-TO-END VERIFIED CHATS
           </span>
         </div>
-        <h1 className="text-2xl font-extrabold text-[#1F242D] font-heading tracking-tight">
+        <h1 className="text-2xl font-bold text-[#1F242D] tracking-tight">
           Direct Messages & Mentorship Inbox
         </h1>
       </div>
 
-      {/* Main Container */}
-      <div className="rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs overflow-hidden flex flex-col md:flex-row h-[650px]">
+      {/* Main Chat Container */}
+      <div className="rounded-xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs overflow-hidden flex flex-col md:flex-row h-[600px]">
         {/* Left Side: Conversation List */}
         <div className="w-full md:w-80 border-r border-[#E6E1D7] flex flex-col bg-[#FAF8F5]">
           {/* Search bar */}
-          <div className="p-3 border-b border-[#E6E1D7]">
+          <div className="p-2.5 border-b border-[#E6E1D7]">
             <div className="relative">
-              <Search className="w-4 h-4 text-[#7E8696] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-[#7E8696] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="Search chats by name or UID..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-[#FCFBF8] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg bg-[#FCFBF8] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
               />
             </div>
           </div>
@@ -260,14 +288,14 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                   <button
                     key={conv.partner.id}
                     onClick={() => handleSelectConversation(conv)}
-                    className={`w-full text-left p-3.5 transition-colors flex items-start gap-3 cursor-pointer ${
+                    className={`w-full text-left p-3 transition-colors flex items-start gap-2.5 cursor-pointer ${
                       isActive ? 'bg-[#F2EFE9]' : 'hover:bg-[#F7F5F0]'
                     }`}
                   >
                     <UserAvatar
                       name={conv.partner.name}
                       size="md"
-                      className="w-10 h-10 shrink-0"
+                      className="w-9 h-9 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
@@ -278,10 +306,10 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                           {conv.lastMessageTime}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex items-center gap-1 mt-0.5">
                         <UserUIDBadge uid={conv.partner.uid} role={conv.partner.role} size="sm" showLabel={false} />
                       </div>
-                      <p className="text-[11px] text-[#565D6D] truncate mt-1">
+                      <p className="text-[11px] text-[#565D6D] truncate mt-0.5">
                         {conv.lastMessage}
                       </p>
                     </div>
@@ -297,19 +325,19 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
           {activePartner ? (
             <>
               {/* Chat Header */}
-              <div className="p-3.5 border-b border-[#E6E1D7] bg-[#FAF8F5] flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="p-3 border-b border-[#E6E1D7] bg-[#FAF8F5] flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
                   <UserAvatar
                     name={activePartner.partner.name}
                     size="md"
-                    className="w-9 h-9"
+                    className="w-8 h-8"
                   />
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xs font-bold text-[#1F242D]">{activePartner.partner.name}</h3>
                       <UserUIDBadge uid={activePartner.partner.uid} role={activePartner.partner.role} size="sm" />
                     </div>
-                    <p className="text-[11px] text-[#7E8696] flex items-center gap-1">
+                    <p className="text-[10px] text-[#7E8696] flex items-center gap-1">
                       <span>{activePartner.partner.currentRole || activePartner.partner.course}</span>
                       <span>·</span>
                       <span>{activePartner.partner.company || activePartner.partner.institutionName}</span>
@@ -317,13 +345,13 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                   </div>
                 </div>
 
-                <div className="text-[11px] font-semibold text-[#5A7458]">
+                <div className="text-[10px] font-semibold text-[#5A7458]">
                   Verified Direct Channel
                 </div>
               </div>
 
               {/* Message Stream */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
                 {messages.map((msg) => {
                   const isMe = msg.senderId === user.id;
                   return (
@@ -332,7 +360,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                       className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                     >
                       <div
-                        className={`max-w-md px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
+                        className={`max-w-md px-3.5 py-2 rounded-xl text-xs leading-relaxed ${
                           isMe
                             ? 'bg-[#1F242D] text-white rounded-br-xs'
                             : 'bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] rounded-bl-xs'
@@ -340,7 +368,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
                       >
                         {msg.text}
                       </div>
-                      <span className="text-[10px] text-[#7E8696] mt-1 px-1 flex items-center gap-1">
+                      <span className="text-[10px] text-[#7E8696] mt-0.5 px-1 flex items-center gap-1">
                         <span>{msg.timestamp}</span>
                         {isMe && <CheckCheck className="w-3 h-3 text-[#5A7458]" />}
                       </span>
@@ -351,18 +379,19 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
               </div>
 
               {/* Message Input Bar */}
-              <form onSubmit={handleSendMessage} className="p-3 border-t border-[#E6E1D7] bg-[#FAF8F5] flex items-center gap-2">
+              <form onSubmit={handleSendMessage} className="p-2.5 border-t border-[#E6E1D7] bg-[#FAF8F5] flex items-center gap-2">
                 <input
+                  ref={chatInputRef}
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={`Reply to ${activePartner.partner.name}...`}
-                  className="flex-1 px-4 py-2 text-xs rounded-xl bg-[#FCFBF8] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
+                  className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-[#FCFBF8] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
                 />
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className="px-4 py-2 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                 >
                   <Send className="w-3.5 h-3.5 text-[#A8B2C0]" />
                   <span>Send</span>
@@ -371,9 +400,9 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-2">
-              <MessageSquare className="w-10 h-10 text-[#7E8696]" />
+              <MessageSquare className="w-8 h-8 text-[#7E8696]" />
               <h3 className="text-sm font-bold text-[#1F242D]">No Conversation Selected</h3>
-              <p className="text-xs text-[#565D6D]">Select a contact from the left list to begin messaging.</p>
+              <p className="text-xs text-[#565D6D]">Select a contact from the left list or start a chat from a Mentor card.</p>
             </div>
           )}
         </div>

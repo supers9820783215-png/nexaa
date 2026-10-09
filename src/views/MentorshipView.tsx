@@ -93,25 +93,45 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
     loadRequests();
   }, [loadMentors, loadRequests]);
 
-  const handleChatWithMentor = async (partnerId: string, partnerName: string) => {
+  const handleChatWithMentor = async (partnerId: string, partnerName: string, partnerAvatar?: string) => {
     if (!user) {
       onOpenAuth();
       return;
     }
     try {
-      // 1. Check if conversation thread exists in Firestore/messages; if not, initialize one
-      await messageService.getOrCreateConversation(
+      // 1. Check or initialize conversation thread in Firestore/conversations
+      const conversationId = await messageService.initializeConversation(
         user.id,
         partnerId,
-        `Hi ${partnerName}! Looking forward to our 1:1 mentorship sessions.`
+        { name: user.name, role: user.role, avatar: user.avatar, uid: user.uid },
+        { name: partnerName, role: 'ALUMNI', avatar: partnerAvatar }
       );
+
+      sessionStorage.setItem('alumnexa_active_conversation_id', conversationId);
+      sessionStorage.setItem('alumnexa_active_chat_partner', partnerId);
+
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('tab', 'messages');
+        newUrl.searchParams.set('conversationId', conversationId);
+        newUrl.searchParams.set('partnerId', partnerId);
+        window.history.pushState({}, '', newUrl.toString());
+      }
+
+      // 2. Programmatically redirect to Messages view and auto-select mentor thread
+      if (onNavigate) {
+        onNavigate('messages', {
+          conversationId,
+          partnerId,
+          recipientId: partnerId,
+          recipientName: partnerName
+        });
+      }
     } catch (err) {
       console.warn('Error starting conversation thread:', err);
-    }
-
-    // 2. Programmatically redirect to Messages view and auto-select mentor thread
-    if (onNavigate) {
-      onNavigate('messages', { partnerId, recipientId: partnerId, recipientName: partnerName });
+      if (onNavigate) {
+        onNavigate('messages', { partnerId, recipientId: partnerId, recipientName: partnerName });
+      }
     }
   };
 
@@ -161,14 +181,14 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E6E1D7] pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E6E1D7] pb-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] font-heading tracking-tight">
+          <h1 className="text-2xl font-bold text-[#1F242D] tracking-tight">
             Mentorship Platform
           </h1>
-          <p className="text-xs sm:text-sm text-[#565D6D] mt-1">
+          <p className="text-xs text-[#565D6D] mt-0.5">
             Connect with seasoned alumni mentors for code reviews, portfolio teardowns, and interview roadmaps.
           </p>
         </div>
@@ -177,7 +197,7 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
         <div className="inline-flex rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] p-1 text-xs">
           <button
             onClick={() => setActiveTab('find-mentors')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer ${
               activeTab === 'find-mentors'
                 ? 'bg-[#1F242D] text-white'
                 : 'text-[#565D6D] hover:text-[#1F242D]'
@@ -193,7 +213,7 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
               }
               setActiveTab('requests');
             }}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'requests'
                 ? 'bg-[#1F242D] text-white'
                 : 'text-[#565D6D] hover:text-[#1F242D]'
@@ -213,17 +233,17 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
           TAB 1: FIND MENTORS
           ========================================================================= */}
       {activeTab === 'find-mentors' && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Unified Single Search Bar */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs">
+          <div className="p-3.5 rounded-xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs">
             <div className="relative">
-              <Search className="w-5 h-5 text-[#7E8696] absolute left-4 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[#7E8696] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search mentors by name, company, role, skills, department, or engineering focus..."
-                className="w-full pl-12 pr-10 py-3 text-sm rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] placeholder-[#7E8696] focus:outline-hidden focus:border-[#5A7458] shadow-inner transition-all"
+                className="w-full pl-10 pr-9 py-2 text-xs rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] placeholder-[#7E8696] focus:outline-hidden focus:border-[#5A7458] shadow-inner transition-all"
               />
               {search && (
                 <button
@@ -308,15 +328,7 @@ export const MentorshipView: React.FC<MentorshipViewProps> = ({ onOpenAuth, onNa
                     </span>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => {
-                          if (!user) {
-                            onOpenAuth();
-                            return;
-                          }
-                          if (onNavigate) {
-                            onNavigate('messages', { recipientId: mentor.id || mentor.uid, recipientName: mentor.name });
-                          }
-                        }}
+                        onClick={() => handleChatWithMentor(mentor.id || mentor.uid, mentor.name, mentor.avatar)}
                         className="px-3 py-1.5 rounded-lg border border-[#E6E1D7] bg-white text-[#1F242D] text-xs font-semibold hover:bg-[#F0ECE1] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                         title="Send Direct Message to Mentor"
                       >

@@ -51,6 +51,9 @@ function MainLayout() {
   const [activeChatPartnerId, setActiveChatPartnerId] = useState<string | null>(() => {
     return typeof window !== 'undefined' ? sessionStorage.getItem('alumnexa_active_chat_partner') : null;
   });
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? sessionStorage.getItem('alumnexa_active_conversation_id') : null;
+  });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState<{ title: string; body: React.ReactNode } | null>(null);
 
@@ -169,9 +172,14 @@ function MainLayout() {
     }
     if (tab === 'messages') {
       const partnerId = extraData?.partnerId || extraData?.recipientId;
+      const conversationId = extraData?.conversationId;
       if (partnerId) {
         setActiveChatPartnerId(partnerId);
         sessionStorage.setItem('alumnexa_active_chat_partner', partnerId);
+      }
+      if (conversationId) {
+        setActiveConversationId(conversationId);
+        sessionStorage.setItem('alumnexa_active_conversation_id', conversationId);
       }
     }
     if (tab === 'admin') {
@@ -239,7 +247,11 @@ function MainLayout() {
           <MessagesView
             onOpenAuth={() => handleOpenAuth('login')}
             initialPartnerId={activeChatPartnerId}
-            onClearInitialPartner={() => setActiveChatPartnerId(null)}
+            initialConversationId={activeConversationId}
+            onClearInitialPartner={() => {
+              setActiveChatPartnerId(null);
+              setActiveConversationId(null);
+            }}
           />
         )}
         {activeTab === 'dashboard' && <RoleDashboardView onNavigate={navigateTo} onOpenAuth={() => handleOpenAuth('login')} />}

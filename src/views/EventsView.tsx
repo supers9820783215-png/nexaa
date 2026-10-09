@@ -138,14 +138,14 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E6E1D7] pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E6E1D7] pb-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F242D] font-heading tracking-tight">
+          <h1 className="text-2xl font-bold text-[#1F242D] tracking-tight">
             Campus & Alumni Events
           </h1>
-          <p className="text-xs sm:text-sm text-[#565D6D] mt-1">
+          <p className="text-xs text-[#565D6D] mt-0.5">
             Webinars, workshops, campus drives, alumni reunions, and technical masterclasses.
           </p>
         </div>
@@ -154,9 +154,9 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
           {canCreate && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0"
             >
-              <Plus className="w-4 h-4 text-[#A8B2C0]" />
+              <Plus className="w-3.5 h-3.5 text-[#A8B2C0]" />
               <span>+ Create Event</span>
             </button>
           )}
@@ -164,15 +164,15 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
       </div>
 
       {/* Unified Single Search Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs">
+      <div className="p-3.5 rounded-xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs">
         <div className="relative">
-          <Search className="w-5 h-5 text-[#7E8696] absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#7E8696] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search events by title, venue, topic, speaker, or date (e.g. 2026-06-15)..."
-            className="w-full pl-12 pr-10 py-3 text-sm rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] placeholder-[#7E8696] focus:outline-hidden focus:border-[#5A7458] shadow-inner transition-all"
+            className="w-full pl-10 pr-9 py-2 text-xs rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] placeholder-[#7E8696] focus:outline-hidden focus:border-[#5A7458] shadow-inner transition-all"
           />
           {search && (
             <button
@@ -205,14 +205,14 @@ export const EventsView: React.FC<EventsViewProps> = ({ onOpenAuth }) => {
           No campus events scheduled yet.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {events.map((ev) => {
             const firstSpeaker = ev.speakers && ev.speakers[0];
             return (
               <div
                 key={ev.id}
                 onClick={() => setSelectedEvent(ev)}
-                className="rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden cursor-pointer"
+                className="rounded-xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden cursor-pointer"
               >
                 {/* Image banner */}
                 <div className="h-36 relative overflow-hidden bg-[#EAE6DE]">
