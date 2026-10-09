@@ -250,7 +250,7 @@ export interface CommunityPost {
   isLiked?: boolean;
 }
 
-export type OpportunityType = 'JOB' | 'INTERNSHIP' | 'REFERRAL';
+export type OpportunityType = 'JOB' | 'INTERNSHIP' | 'REFERRAL' | 'FULL_TIME' | 'PROJECT' | 'RESEARCH';
 export type WorkplaceType = 'REMOTE' | 'HYBRID' | 'ON_SITE';
 
 export interface Opportunity {
@@ -293,6 +293,9 @@ export interface Opportunity {
   authorName?: string;
   authorRole?: string;
   institutionId?: string;
+  postedBy?: string;
+  workplace?: string;
+  status?: string;
 }
 
 export type EventType = 'MEETUP' | 'WORKSHOP' | 'WEBINAR' | 'COLLEGE_EVENT' | 'CAREER_EVENT' | 'MENTORSHIP_SESSION';

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Opportunity, OpportunityType, WorkplaceType } from '../types.ts';
 import { opportunityService } from '../services/opportunityService.ts';
 import { useAuth } from '../context/AuthContext.tsx';
-import { LoadingState, EmptyState } from '../components/common/StateFeedback.tsx';
+import { LoadingState } from '../components/common/StateFeedback.tsx';
+import { UserAvatar } from '../components/common/UserAvatar.tsx';
 import {
   Briefcase,
   Search,
@@ -21,7 +22,11 @@ import {
   ShieldCheck,
   Send,
   Sparkles,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Trash2,
+  UserCheck,
+  Layers,
+  Mail
 } from 'lucide-react';
 
 interface OpportunitiesViewProps {
@@ -33,7 +38,10 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
+  // Tab: All Opportunities vs Jobs Posted by Me (for Alumni / Faculty)
+  const [viewTab, setViewTab] = useState<'ALL' | 'MY_POSTS'>('ALL');
+
+  // Filters - default to ALL / empty so newly created posts are never blocked
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<OpportunityType | 'ALL'>('ALL');
   const [workplaceFilter, setWorkplaceFilter] = useState<WorkplaceType | 'ALL'>('ALL');
@@ -51,6 +59,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
   const [postTitle, setPostTitle] = useState('');
   const [postCompany, setPostCompany] = useState('');
   const [postType, setPostType] = useState<OpportunityType>('INTERNSHIP');
+  const [postEmploymentType, setPostEmploymentType] = useState('Full-time');
   const [postLocation, setPostLocation] = useState('Mumbai / Remote');
   const [postWorkplace, setPostWorkplace] = useState<WorkplaceType>('HYBRID');
   const [postSalary, setPostSalary] = useState('₹40,000 / month');
@@ -63,29 +72,28 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
   const [postIsExclusive, setPostIsExclusive] = useState(false);
   const [postSuccessMsg, setPostSuccessMsg] = useState('');
 
-  const canPost = user && (user.role === 'ALUMNI' || user.role === 'FACULTY' || user.role === 'INSTITUTION_ADMIN' || user.role === 'SUPER_ADMIN');
+  const canPost = Boolean(
+    user && (user.role === 'ALUMNI' || user.role === 'FACULTY' || user.role === 'INSTITUTION_ADMIN' || user.role === 'SUPER_ADMIN')
+  );
 
-  const fetchOpportunities = useCallback(async () => {
-    setLoading(true);
-    try {
-      const list = await opportunityService.getOpportunities({
-        type: typeFilter,
-        workplaceType: workplaceFilter,
-        department: departmentFilter,
-        skills: skillsInput,
-        search,
-      });
-      setOpportunities(list);
-    } catch (err) {
-      console.error('Failed to load opportunities:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter, workplaceFilter, departmentFilter, skillsInput, search]);
-
+  // Real-time subscription to opportunities
   useEffect(() => {
-    fetchOpportunities();
-  }, [fetchOpportunities]);
+    setLoading(true);
+    const unsubscribe = opportunityService.subscribeOpportunities((list) => {
+      setOpportunities(list);
+      setLoading(false);
+    }, {
+      type: typeFilter,
+      workplaceType: workplaceFilter,
+      department: departmentFilter,
+      skills: skillsInput,
+      search,
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [typeFilter, workplaceFilter, departmentFilter, skillsInput, search]);
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +111,6 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
       setApplySuccessMsg('');
       setIsApplyModalOpen(false);
       setApplyNote('');
-      fetchOpportunities();
     }, 2200);
   };
 
@@ -119,8 +126,9 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
       company: postCompany,
       type: postType,
       location: postLocation,
+      workplace: postWorkplace,
       workplaceType: postWorkplace,
-      employmentType: postType === 'INTERNSHIP' ? 'Internship' : 'Full-time',
+      employmentType: postEmploymentType || (postType === 'INTERNSHIP' ? 'Internship' : 'Full-time'),
       experienceRequired: '0 - 2 Years',
       stipendSalary: postSalary,
       departmentPreference: postDept,
@@ -133,7 +141,8 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
       applicationLink: postLink,
       isExclusive: postIsExclusive,
       exclusiveInstitutionName: postIsExclusive ? (user.institutionName || 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)') : undefined,
-      exclusiveInstitutionId: postIsExclusive ? (user.institutionId || 'inst-dtss-01') : undefined,
+      exclusiveInstitutionId: postIsExclusive ? (user.institutionId || 'GLOBAL') : undefined,
+      postedBy: user.uid,
       postedById: user.id,
       posterName: user.name,
       posterUid: user.uid,
@@ -142,9 +151,10 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
       authorUid: user.uid,
       authorName: user.name,
       authorRole: user.role,
-      institutionId: user.institutionId || 'inst-dtss-01',
+      institutionId: user.institutionId || 'GLOBAL',
       createdAt: new Date().toISOString(),
-      institution: user.institutionName || 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)'
+      institution: user.institutionName || 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)',
+      status: 'active'
     });
 
     setPostSuccessMsg('Opportunity published to collegiate network successfully!');
@@ -154,12 +164,46 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
       setPostTitle('');
       setPostCompany('');
       setPostDesc('');
-      fetchOpportunities();
-    }, 2000);
+      setPostLink('https://careers.company.com/apply');
+    }, 1500);
   };
 
+  const handleDeleteOpportunity = async (oppId: string, oppTitle: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${oppTitle}"? This will remove the listing permanently.`)) {
+      return;
+    }
+    try {
+      await opportunityService.deleteOpportunity(oppId);
+    } catch (err) {
+      console.error('Failed to delete opportunity:', err);
+    }
+  };
+
+  // Filter based on viewTab (ALL vs MY_POSTS)
+  const myPostsCount = opportunities.filter(o =>
+    user && (
+      o.postedBy === user.uid ||
+      o.posterUid === user.uid ||
+      o.postedById === user.id ||
+      o.authorUid === user.uid
+    )
+  ).length;
+
+  const displayedOpportunities = opportunities.filter(opp => {
+    if (viewTab === 'MY_POSTS') {
+      if (!user) return false;
+      return (
+        opp.postedBy === user.uid ||
+        opp.posterUid === user.uid ||
+        opp.postedById === user.id ||
+        opp.authorUid === user.uid
+      );
+    }
+    return true;
+  });
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E6E1D7] pb-6">
         <div>
@@ -171,31 +215,82 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {canPost && (
+          <button
+            onClick={() => setShowPostModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors shadow-xs flex items-center gap-2 cursor-pointer self-start sm:self-auto shrink-0"
+          >
+            <Plus className="w-4 h-4 text-[#A8B2C0]" />
+            <span>+ Post New Opportunity</span>
+          </button>
+        )}
+      </div>
+
+      {/* Alumni / Faculty Filter Tabs: All Opportunities vs Jobs Posted by Me */}
+      {canPost && (
+        <div className="flex items-center gap-2 border-b border-[#E6E1D7] pb-3">
+          <button
+            onClick={() => setViewTab('ALL')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              viewTab === 'ALL'
+                ? 'bg-[#1F242D] text-white shadow-xs'
+                : 'bg-[#FAF8F5] text-[#565D6D] hover:bg-[#EFEBE3] border border-[#E6E1D7]'
+            }`}
+          >
+            <span>All Opportunities</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] ${
+                viewTab === 'ALL' ? 'bg-white/20 text-white' : 'bg-[#E6E1D7] text-[#1F242D]'
+              }`}
+            >
+              {opportunities.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setViewTab('MY_POSTS')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              viewTab === 'MY_POSTS'
+                ? 'bg-[#1F242D] text-white shadow-xs'
+                : 'bg-[#FAF8F5] text-[#565D6D] hover:bg-[#EFEBE3] border border-[#E6E1D7]'
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5 text-[#5A7458]" />
+            <span>Jobs Posted by Me</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] ${
+                viewTab === 'MY_POSTS' ? 'bg-white/20 text-white' : 'bg-[#E6E1D7] text-[#1F242D]'
+              }`}
+            >
+              {myPostsCount}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Filter Panel & Search Bar */}
+      <div className="p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs space-y-4">
+        {/* Search Bar with prominent Post Button beside it */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-[#7E8696] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by job title, hiring company, role keywords..."
+              className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
+            />
+          </div>
           {canPost && (
             <button
               onClick={() => setShowPostModal(true)}
-              className="px-4 py-2 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer shrink-0"
             >
               <Plus className="w-4 h-4 text-[#A8B2C0]" />
-              <span>+ Post Opportunity</span>
+              <span>+ Add Job Opening</span>
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Filter Panel */}
-      <div className="p-5 rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-[#7E8696] absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by job title, hiring company, role keywords..."
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D] focus:outline-hidden"
-          />
         </div>
 
         {/* Filters Grid */}
@@ -210,6 +305,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               <option value="ALL">All Types</option>
               <option value="INTERNSHIP">Internship</option>
               <option value="FULL_TIME">Full-time Job</option>
+              <option value="JOB">Job</option>
               <option value="REFERRAL">Alumni Referral</option>
               <option value="PROJECT">Paid Project</option>
               <option value="RESEARCH">Research Opportunity</option>
@@ -241,16 +337,17 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               <option value="Information Technology">Information Technology</option>
               <option value="Computer Science">Computer Science</option>
               <option value="Management Studies">Management Studies</option>
+              <option value="Commerce">Commerce</option>
             </select>
           </div>
 
-          <div className="col-span-2 sm:col-span-1">
+          <div>
             <label className="block text-[10px] font-semibold text-[#7E8696] uppercase mb-1">Required Skill</label>
             <input
               type="text"
               value={skillsInput}
               onChange={(e) => setSkillsInput(e.target.value)}
-              placeholder="e.g. React, Go, Docker"
+              placeholder="e.g. React, Python"
               className="w-full px-2.5 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
             />
           </div>
@@ -260,100 +357,162 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
       {/* Opportunities Grid */}
       {loading ? (
         <LoadingState message="Loading campus opportunities and verified job postings..." />
-      ) : opportunities.length === 0 ? (
-        <div className="py-16 text-center text-gray-500 font-medium">
-          No job or internship opportunities posted yet.
+      ) : displayedOpportunities.length === 0 ? (
+        <div className="py-16 text-center text-[#7E8696] font-medium bg-[#FCFBF8] border border-[#E6E1D7] rounded-2xl p-8 space-y-3">
+          <Briefcase className="w-10 h-10 text-[#A8B2C0] mx-auto" />
+          <h3 className="text-sm font-bold text-[#1F242D]">
+            {viewTab === 'MY_POSTS' ? 'You have not posted any opportunities yet.' : 'No opportunities found.'}
+          </h3>
+          <p className="text-xs text-[#565D6D] max-w-sm mx-auto">
+            {viewTab === 'MY_POSTS'
+              ? 'Click "+ Post New Opportunity" to share openings, internships, or referral opportunities.'
+              : 'Try clearing your filters or check back later for newly published collegiate positions.'}
+          </p>
+          {canPost && viewTab === 'MY_POSTS' && (
+            <button
+              onClick={() => setShowPostModal(true)}
+              className="px-4 py-2 rounded-xl bg-[#1F242D] text-white text-xs font-semibold hover:bg-[#343A46] transition-colors shadow-xs inline-flex items-center gap-2 cursor-pointer mt-2"
+            >
+              <Plus className="w-4 h-4 text-[#A8B2C0]" />
+              <span>Post Your First Job</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {opportunities.map((opp) => (
-            <div
-              key={opp.id}
-              className="rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
-            >
-              <div className="p-6">
-                {/* Header: Type */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-semibold text-[#5A7458]">
-                    {opp.type.replace('_', ' ')}
-                  </span>
-                </div>
+          {displayedOpportunities.map((opp) => {
+            const isOwner = Boolean(
+              user && (
+                opp.postedBy === user.uid ||
+                opp.posterUid === user.uid ||
+                opp.postedById === user.id ||
+                opp.authorUid === user.uid
+              )
+            );
+            const posterDisplayName = opp.postedByName || opp.posterName || opp.authorName || 'Alumni Member';
+            const posterRoleLabel = opp.postedByRole || opp.posterRole || opp.authorRole || 'ALUMNI';
 
-                <h3 className="text-base font-bold text-[#1F242D] leading-snug">
-                  {opp.title}
-                </h3>
-                <p className="text-xs font-semibold text-[#5A7458] mt-0.5">
-                  {opp.company}
-                </p>
+            return (
+              <div
+                key={opp.id}
+                className="rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
+              >
+                <div className="p-6">
+                  {/* Top Badges */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#EBF2EA] text-[#3D5B3B] border border-[#CFE1CD]">
+                        {opp.type.replace('_', ' ')}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FAF8F5] text-[#565D6D] border border-[#E6E1D7]">
+                        {opp.workplaceType || opp.workplace || 'HYBRID'}
+                      </span>
+                      {isOwner && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E8EFF7] text-[#2A537A] border border-[#BACFE6]">
+                          Your Listing
+                        </span>
+                      )}
+                    </div>
+                    {isOwner && (
+                      <button
+                        onClick={() => handleDeleteOpportunity(opp.id, opp.title)}
+                        title="Delete Listing"
+                        className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
 
-                {/* Posted by */}
-                <div className="mt-3 p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-[10px] text-[#7E8696] block">Posted by</span>
-                    <span className="font-semibold text-[#1F242D]">{opp.postedByName || opp.posterName}</span>
-                  </div>
-                </div>
+                  <h3 className="text-base font-bold text-[#1F242D] leading-snug">
+                    {opp.title}
+                  </h3>
+                  <p className="text-xs font-semibold text-[#5A7458] mt-0.5">
+                    {opp.company}
+                  </p>
 
-                {/* Details */}
-                <div className="mt-3.5 space-y-1.5 text-xs text-[#565D6D]">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-[#7E8696] shrink-0" />
-                    <span>{opp.location} · <span className="font-medium text-[#1F242D]">{opp.workplaceType}</span></span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <DollarSign className="w-3.5 h-3.5 text-[#7E8696] shrink-0" />
-                    <span className="font-semibold text-[#1F242D]">{opp.stipendSalary || opp.salaryRange || opp.stipend || 'Competitive'}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#7E8696] shrink-0" />
-                    <span>Deadline: {opp.deadline}</span>
-                  </div>
-                </div>
-
-                {/* Skills */}
-                <div className="flex flex-wrap gap-1 mt-4">
-                  {(opp.requiredSkills || opp.skills || []).slice(0, 3).map((s, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#1F242D] text-[10px] border border-[#E6E1D7]"
-                    >
-                      {s}
+                  {/* Poster Initials Badge with UserAvatar */}
+                  <div className="mt-3.5 p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <UserAvatar name={posterDisplayName} size="sm" />
+                      <div className="min-w-0">
+                        <span className="text-[10px] text-[#7E8696] block truncate">Posted by</span>
+                        <span className="font-semibold text-[#1F242D] block truncate">{posterDisplayName}</span>
+                      </div>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase bg-[#EAE7DF] text-[#565D6D] shrink-0">
+                      {posterRoleLabel}
                     </span>
-                  ))}
-                  {(opp.requiredSkills || opp.skills || []).length > 3 && (
-                    <span className="px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-[#7E8696] text-[10px]">
-                      +{(opp.requiredSkills || opp.skills || []).length - 3}
-                    </span>
-                  )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="mt-3.5 space-y-1.5 text-xs text-[#565D6D]">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#7E8696] shrink-0" />
+                      <span>{opp.location} · <span className="font-medium text-[#1F242D]">{opp.workplaceType || opp.workplace || 'HYBRID'}</span></span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="w-3.5 h-3.5 text-[#7E8696] shrink-0" />
+                      <span className="font-semibold text-[#1F242D]">
+                        {opp.stipendSalary || opp.salaryRange || opp.stipend || 'Competitive'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-[#7E8696] shrink-0" />
+                      <span>Deadline: <span className="font-medium text-[#1F242D]">{opp.deadline || 'Rolling'}</span></span>
+                    </div>
+                    {isOwner && (
+                      <div className="flex items-center gap-1.5 text-[#2A537A] font-semibold text-[11px] pt-1">
+                        <span>Applicants Tracked: {opp.applicantsCount || 0}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Skills */}
+                  <div className="flex flex-wrap gap-1 mt-4">
+                    {(opp.requiredSkills || opp.skills || []).slice(0, 3).map((s, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#1F242D] text-[10px] border border-[#E6E1D7]"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                    {(opp.requiredSkills || opp.skills || []).length > 3 && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-[#7E8696] text-[10px]">
+                        +{(opp.requiredSkills || opp.skills || []).length - 3}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions: View Details / Apply */}
+                <div className="px-6 py-3.5 bg-[#FAF8F5] border-t border-[#E6E1D7] flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setSelectedOpp(opp)}
+                    className="px-3 py-1.5 rounded-lg border border-[#E6E1D7] hover:bg-[#EFEBE3] text-[#1F242D] text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    View Details
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        onOpenAuth();
+                        return;
+                      }
+                      setSelectedOpp(opp);
+                      setIsApplyModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-[#1F242D] hover:bg-[#343A46] text-white text-xs font-semibold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{opp.type === 'REFERRAL' ? 'Request Referral' : 'Apply / Details'}</span>
+                    <ExternalLink className="w-3 h-3 text-[#A8B2C0]" />
+                  </button>
                 </div>
               </div>
-
-              {/* Actions: View Details / Apply */}
-              <div className="px-6 py-3.5 bg-[#FAF8F5] border-t border-[#E6E1D7] flex items-center justify-between gap-2">
-                <button
-                  onClick={() => setSelectedOpp(opp)}
-                  className="px-3 py-1.5 rounded-lg border border-[#E6E1D7] hover:bg-[#EFEBE3] text-[#1F242D] text-xs font-semibold transition-colors cursor-pointer"
-                >
-                  View Details
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!user) {
-                      onOpenAuth();
-                      return;
-                    }
-                    setSelectedOpp(opp);
-                    setIsApplyModalOpen(true);
-                  }}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#1F242D] hover:bg-[#343A46] text-white text-xs font-semibold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
-                >
-                  <span>{opp.type === 'REFERRAL' ? 'Request Referral' : 'Apply Now'}</span>
-                  <ExternalLink className="w-3 h-3 text-[#A8B2C0]" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -373,7 +532,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               </div>
               <button
                 onClick={() => setSelectedOpp(null)}
-                className="p-1 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696]"
+                className="p-1 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -402,6 +561,26 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                 </div>
               </div>
 
+              {selectedOpp.applicationLink && (
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-[#7E8696] block">Direct Application Link / Email</span>
+                    <p className="text-xs font-semibold text-[#1F242D] break-all">{selectedOpp.applicationLink}</p>
+                  </div>
+                  {selectedOpp.applicationLink.startsWith('http') && (
+                    <a
+                      href={selectedOpp.applicationLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-[#1F242D] text-white font-semibold text-[11px] flex items-center gap-1 shrink-0 ml-3"
+                    >
+                      <span>Visit Link</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              )}
+
               <div>
                 <h4 className="text-[11px] font-bold text-[#7E8696] uppercase tracking-wider mb-2">Required Skills</h4>
                 <div className="flex flex-wrap gap-1.5">
@@ -414,9 +593,13 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               </div>
 
               <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-[#7E8696]">Listing Referrer:</span>
-                  <p className="text-xs font-bold text-[#1F242D]">{selectedOpp.postedByName || selectedOpp.posterName}</p>
+                <div className="flex items-center gap-3">
+                  <UserAvatar name={selectedOpp.postedByName || selectedOpp.posterName} size="md" />
+                  <div>
+                    <span className="text-[10px] text-[#7E8696]">Listing Poster:</span>
+                    <p className="text-xs font-bold text-[#1F242D]">{selectedOpp.postedByName || selectedOpp.posterName}</p>
+                    <span className="text-[10px] text-[#5A7458] font-semibold">{selectedOpp.postedByRole || selectedOpp.posterRole || 'ALUMNI'}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -424,13 +607,13 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
             <div className="p-4 bg-[#FAF8F5] border-t border-[#E6E1D7] flex items-center justify-end gap-2">
               <button
                 onClick={() => setSelectedOpp(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565D6D] hover:bg-[#EFEBE3]"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#565D6D] hover:bg-[#EFEBE3] cursor-pointer"
               >
                 Close
               </button>
               <button
                 onClick={() => setIsApplyModalOpen(true)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#1F242D] text-white hover:bg-[#343A46]"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#1F242D] text-white hover:bg-[#343A46] cursor-pointer"
               >
                 {selectedOpp.type === 'REFERRAL' ? 'Request Referral' : 'Apply'}
               </button>
@@ -456,7 +639,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               </div>
               <button
                 onClick={() => setIsApplyModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696]"
+                className="p-1 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -472,20 +655,21 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               </div>
             ) : (
               <form onSubmit={handleApply} className="p-6 space-y-4 text-xs">
-                {/* Auto student info attached */}
+                {/* Auto applicant info */}
                 <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] space-y-1">
                   <span className="text-[10px] font-bold text-[#7E8696] uppercase block">
                     Applicant Information:
                   </span>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-[#1F242D]">{user?.name}</span>
+                    <span className="text-[10px] text-[#5A7458] font-bold">{user?.role}</span>
                   </div>
                   <p className="text-[11px] text-[#7E8696]">{user?.institutionName || 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)'}</p>
                 </div>
 
                 <div>
                   <label className="block font-semibold text-[#1F242D] mb-1">
-                    {selectedOpp.type === 'REFERRAL' ? 'Pitch to Referrer *' : 'Cover Note / Portfolio Link *'}
+                    {selectedOpp.type === 'REFERRAL' ? 'Pitch to Referrer *' : 'Cover Note / Resume & Portfolio Link *'}
                   </label>
                   <textarea
                     rows={4}
@@ -501,13 +685,13 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                   <button
                     type="button"
                     onClick={() => setIsApplyModalOpen(false)}
-                    className="px-4 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#565D6D]"
+                    className="px-4 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#565D6D] cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-lg bg-[#1F242D] text-white font-semibold hover:bg-[#343A46]"
+                    className="px-4 py-2 rounded-lg bg-[#1F242D] text-white font-semibold hover:bg-[#343A46] cursor-pointer"
                   >
                     Confirm Submission
                   </button>
@@ -527,11 +711,11 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
             <div className="p-5 border-b border-[#E6E1D7] bg-[#FAF8F5] flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-[#1F242D]">Post Career Opportunity</h3>
-                <p className="text-xs text-[#565D6D]">Publish an internship, full-time role, or alumni referral.</p>
+                <p className="text-xs text-[#565D6D]">Publish an internship, full-time role, or alumni referral directly to students & alumni.</p>
               </div>
               <button
                 onClick={() => setShowPostModal(false)}
-                className="p-1 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696]"
+                className="p-1 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -547,34 +731,36 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               </div>
             ) : (
               <form onSubmit={handlePostOpportunity} className="p-6 overflow-y-auto space-y-4 text-xs">
+                {/* Title & Company */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-[#1F242D] mb-1">Opportunity Title *</label>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Job / Opportunity Title *</label>
                     <input
                       type="text"
                       required
                       value={postTitle}
                       onChange={(e) => setPostTitle(e.target.value)}
-                      placeholder="e.g., Associate Cloud Solutions Engineer"
+                      placeholder="e.g. Associate Cloud Solutions Engineer"
                       className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-[#1F242D] mb-1">Hiring Organization / Company *</label>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Company / Hiring Organization *</label>
                     <input
                       type="text"
                       required
                       value={postCompany}
                       onChange={(e) => setPostCompany(e.target.value)}
-                      placeholder="e.g., Razorpay / Microsoft"
+                      placeholder="e.g. Razorpay / Microsoft"
                       className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                     />
                   </div>
                 </div>
 
+                {/* Type, Employment Type & Workplace Mode */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block font-semibold text-[#1F242D] mb-1">Opportunity Type</label>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Opportunity Type *</label>
                     <select
                       value={postType}
                       onChange={(e) => setPostType(e.target.value as OpportunityType)}
@@ -588,7 +774,20 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                     </select>
                   </div>
                   <div>
-                    <label className="block font-semibold text-[#1F242D] mb-1">Workplace Mode</label>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Employment Type</label>
+                    <select
+                      value={postEmploymentType}
+                      onChange={(e) => setPostEmploymentType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+                    >
+                      <option value="Full-time">Full-time</option>
+                      <option value="Internship">Internship</option>
+                      <option value="Part-time">Part-time</option>
+                      <option value="Contract">Contract / Project</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Workplace Mode *</label>
                     <select
                       value={postWorkplace}
                       onChange={(e) => setPostWorkplace(e.target.value as WorkplaceType)}
@@ -599,26 +798,42 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                       <option value="ON_SITE">On-site</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Stipend/Salary & Location */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-[#1F242D] mb-1">Salary / Stipend</label>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Stipend / Salary *</label>
                     <input
                       type="text"
                       value={postSalary}
                       onChange={(e) => setPostSalary(e.target.value)}
-                      placeholder="e.g. ₹45,000 / month"
+                      placeholder="e.g. ₹45,000 / month or ₹8 - 12 LPA"
+                      className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Location *</label>
+                    <input
+                      type="text"
+                      value={postLocation}
+                      onChange={(e) => setPostLocation(e.target.value)}
+                      placeholder="e.g. Mumbai, Bengaluru, or Remote"
                       className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                     />
                   </div>
                 </div>
 
+                {/* Application Link / Email & Deadline */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-semibold text-[#1F242D] mb-1">Location</label>
+                    <label className="block font-semibold text-[#1F242D] mb-1">Application Link / Email *</label>
                     <input
                       type="text"
-                      value={postLocation}
-                      onChange={(e) => setPostLocation(e.target.value)}
-                      placeholder="Mumbai / Bengaluru"
+                      required
+                      value={postLink}
+                      onChange={(e) => setPostLink(e.target.value)}
+                      placeholder="e.g. https://careers.company.com/apply or jobs@company.com"
                       className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                     />
                   </div>
@@ -633,6 +848,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                   </div>
                 </div>
 
+                {/* Target Batches & Required Skills */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold text-[#1F242D] mb-1">Target Batches (comma separated)</label>
@@ -656,6 +872,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                   </div>
                 </div>
 
+                {/* Description */}
                 <div>
                   <label className="block font-semibold text-[#1F242D] mb-1">Job Description & Qualifications *</label>
                   <textarea
@@ -663,7 +880,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                     required
                     value={postDesc}
                     onChange={(e) => setPostDesc(e.target.value)}
-                    placeholder="State responsibilities, day-to-day work, minimum GPA or requirements..."
+                    placeholder="State responsibilities, day-to-day work, minimum qualifications or requirements..."
                     className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                   />
                 </div>
@@ -672,13 +889,13 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                   <button
                     type="button"
                     onClick={() => setShowPostModal(false)}
-                    className="px-4 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#565D6D]"
+                    className="px-4 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#565D6D] cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-lg bg-[#1F242D] text-white font-semibold hover:bg-[#343A46]"
+                    className="px-4 py-2 rounded-lg bg-[#1F242D] text-white font-semibold hover:bg-[#343A46] cursor-pointer"
                   >
                     Publish Listing
                   </button>
