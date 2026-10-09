@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Opportunity, OpportunityType, WorkplaceType } from '../types.ts';
-import { opportunityService } from '../services/opportunityService.ts';
+import { opportunityService, OpportunityApplication } from '../services/opportunityService.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { LoadingState } from '../components/common/StateFeedback.tsx';
 import { UserAvatar } from '../components/common/UserAvatar.tsx';
@@ -14,7 +14,10 @@ import {
   CheckCircle2,
   X,
   DollarSign,
-  Trash2
+  Trash2,
+  Users,
+  FileText,
+  Mail
 } from 'lucide-react';
 
 interface OpportunitiesViewProps {
@@ -40,7 +43,14 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [applyNote, setApplyNote] = useState('');
+  const [applyResumeLink, setApplyResumeLink] = useState('');
   const [applySuccessMsg, setApplySuccessMsg] = useState('');
+  const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+
+  // View Applicants Modal (for alumni / poster)
+  const [selectedJobForApplicants, setSelectedJobForApplicants] = useState<Opportunity | null>(null);
+  const [applicantsList, setApplicantsList] = useState<OpportunityApplication[]>([]);
+  const [loadingApplicants, setLoadingApplicants] = useState(false);
 
   // Post Opportunity modal state
   const [showPostModal, setShowPostModal] = useState(false);
@@ -64,42 +74,57 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
     user && (user.role === 'ALUMNI' || user.role === 'FACULTY' || user.role === 'INSTITUTION_ADMIN' || user.role === 'SUPER_ADMIN')
   );
 
-  // Real-time subscription to opportunities with unrestricted visibility
+  // Unified real-time listener for ALL roles (Student, Alumni, Faculty, Admin)
+  // Directly binds to shared Firestore collection 'opportunities'
   useEffect(() => {
+    // Clear legacy mock cache on mount
+    try {
+      localStorage.removeItem('alumnexa_opportunities_v2');
+      localStorage.removeItem('alumnexa_opportunities');
+    } catch (e) {}
+
     setLoading(true);
-    const unsubscribe = opportunityService.subscribeOpportunities((list) => {
-      setOpportunities(list);
+    const unsubscribe = opportunityService.subscribeOpportunities((liveJobs) => {
+      setOpportunities(liveJobs);
       setLoading(false);
-    }, {
-      type: typeFilter,
-      workplaceType: workplaceFilter,
-      department: departmentFilter,
-      skills: skillsInput,
-      search,
     });
 
     return () => {
       unsubscribe();
     };
-  }, [typeFilter, workplaceFilter, departmentFilter, skillsInput, search]);
+  }, []);
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOpp || !user) return;
 
-    await opportunityService.applyToOpportunity(selectedOpp.id, {
-      applicantId: user.id,
-      applicantName: user.name,
-      applicantUid: user.uid,
-      note: applyNote
-    });
+    setIsSubmittingApp(true);
+    try {
+      await opportunityService.submitApplication(selectedOpp.id, {
+        applicantId: user.id,
+        applicantUid: user.uid,
+        applicantName: user.name,
+        applicantEmail: user.email,
+        applicantRole: user.role,
+        applicantAvatar: user.avatar || '',
+        applicantCourse: user.course || '',
+        note: applyNote.trim(),
+        resumeLink: applyResumeLink.trim() || undefined
+      });
 
-    setApplySuccessMsg(`Application logged for "${selectedOpp.title}". Referral request submitted.`);
-    setTimeout(() => {
-      setApplySuccessMsg('');
-      setIsApplyModalOpen(false);
-      setApplyNote('');
-    }, 2200);
+      setApplySuccessMsg(`Application successfully submitted for "${selectedOpp.title}". The recruiter has been notified!`);
+      setTimeout(() => {
+        setApplySuccessMsg('');
+        setIsApplyModalOpen(false);
+        setApplyNote('');
+        setApplyResumeLink('');
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to submit application:', err);
+      alert('Failed to submit application. Please check your connection.');
+    } finally {
+      setIsSubmittingApp(false);
+    }
   };
 
   const handlePostOpportunity = async (e: React.FormEvent) => {
@@ -167,26 +192,80 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
     }
   };
 
-  // Filter based on viewTab (ALL vs MY_POSTS)
-  const myPostsCount = opportunities.filter(o =>
-    user && (
-      (o.postedBy && (o.postedBy === user.uid || o.postedBy === user.id)) ||
-      (o.posterUid && (o.posterUid === user.uid || o.posterUid === user.id)) ||
-      (o.postedById && (o.postedById === user.id || o.postedById === user.uid)) ||
-      (o.authorUid && (o.authorUid === user.uid || o.authorUid === user.id))
-    )
-  ).length;
-
-  const displayedOpportunities = opportunities.filter(opp => {
-    if (viewTab === 'MY_POSTS') {
-      if (!user) return false;
-      return (
-        (opp.postedBy && (opp.postedBy === user.uid || opp.postedBy === user.id)) ||
-        (opp.posterUid && (opp.posterUid === user.uid || opp.posterUid === user.id)) ||
-        (opp.postedById && (opp.postedById === user.id || opp.postedById === user.uid)) ||
-        (opp.authorUid && (opp.authorUid === user.uid || opp.authorUid === user.id))
-      );
+  const handleOpenApplicants = async (opp: Opportunity) => {
+    setSelectedJobForApplicants(opp);
+    setLoadingApplicants(true);
+    try {
+      const apps = await opportunityService.getOpportunityApplicants(opp.id);
+      setApplicantsList(apps);
+    } catch (err) {
+      console.error('Failed to load applicants:', err);
+    } finally {
+      setLoadingApplicants(false);
     }
+  };
+
+  // Helper to determine if a job was posted by the current user
+  const isMyPost = (opp: Opportunity) => {
+    if (!user) return false;
+    const uid = (user.uid || '').toLowerCase();
+    const id = (user.id || '').toLowerCase();
+    return (
+      (opp.postedBy && (opp.postedBy.toLowerCase() === uid || opp.postedBy.toLowerCase() === id)) ||
+      (opp.posterUid && (opp.posterUid.toLowerCase() === uid || opp.posterUid.toLowerCase() === id)) ||
+      (opp.postedById && (opp.postedById.toLowerCase() === id || opp.postedById.toLowerCase() === uid)) ||
+      (opp.authorUid && (opp.authorUid.toLowerCase() === uid || opp.authorUid.toLowerCase() === id))
+    );
+  };
+
+  const myPostsCount = opportunities.filter(isMyPost).length;
+
+  // Filter in memory from unified live state
+  const displayedOpportunities = opportunities.filter((opp) => {
+    if (viewTab === 'MY_POSTS') {
+      if (!isMyPost(opp)) return false;
+    }
+
+    if (typeFilter !== 'ALL') {
+      const fType = typeFilter.toUpperCase().replace(/\s+/g, '_');
+      const oType = (opp.type || '').toUpperCase().replace(/\s+/g, '_');
+      if (fType === 'JOB' || fType === 'FULL_TIME') {
+        if (oType !== 'JOB' && oType !== 'FULL_TIME') return false;
+      } else if (!oType.includes(fType) && !fType.includes(oType)) {
+        return false;
+      }
+    }
+
+    if (workplaceFilter !== 'ALL') {
+      const wTarget = workplaceFilter.toUpperCase().replace(/\s+/g, '_');
+      const mode = (opp.workplaceType || opp.workplace || '').toUpperCase().replace(/\s+/g, '_');
+      if (mode && !mode.includes(wTarget) && !wTarget.includes(mode)) return false;
+    }
+
+    if (departmentFilter !== 'ALL') {
+      const dLower = departmentFilter.toLowerCase().trim();
+      if (opp.departmentPreference) {
+        const dPref = opp.departmentPreference.toLowerCase();
+        if (!dPref.includes(dLower) && !dPref.includes('all')) return false;
+      }
+    }
+
+    if (skillsInput.trim()) {
+      const sLower = skillsInput.toLowerCase().trim();
+      const skills = [...(opp.requiredSkills || []), ...(opp.skills || [])].map(s => s.toLowerCase());
+      if (!skills.some(s => s.includes(sLower))) return false;
+    }
+
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      const match =
+        (opp.title && opp.title.toLowerCase().includes(q)) ||
+        (opp.company && opp.company.toLowerCase().includes(q)) ||
+        (opp.description && opp.description.toLowerCase().includes(q)) ||
+        (opp.location && opp.location.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+
     return true;
   });
 
@@ -344,17 +423,17 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
 
       {/* Opportunities Grid */}
       {loading ? (
-        <LoadingState message="Loading campus opportunities and verified job postings..." />
+        <LoadingState message="Connecting to shared live opportunities feed..." />
       ) : displayedOpportunities.length === 0 ? (
         <div className="py-12 text-center text-[#7E8696] font-medium bg-[#FCFBF8] border border-[#E6E1D7] rounded-xl p-6 space-y-2.5">
           <Briefcase className="w-9 h-9 text-[#A8B2C0] mx-auto" />
           <h3 className="text-sm font-bold text-[#1F242D]">
-            {viewTab === 'MY_POSTS' ? 'You have not posted any opportunities yet.' : 'No opportunities found.'}
+            {viewTab === 'MY_POSTS' ? 'You have not posted any opportunities yet.' : 'No opportunities posted yet.'}
           </h3>
           <p className="text-xs text-[#565D6D] max-w-sm mx-auto">
             {viewTab === 'MY_POSTS'
-              ? 'Click "+ Post Opportunity" to share openings, internships, or referral opportunities.'
-              : 'Try clearing your filters or check back later for newly published collegiate positions.'}
+              ? 'Click "+ Post Opportunity" to publish openings directly to students and alumni.'
+              : 'Be the first to share an opening, or check back soon for verified campus postings.'}
           </p>
           {canPost && viewTab === 'MY_POSTS' && (
             <button
@@ -369,14 +448,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {displayedOpportunities.map((opp) => {
-            const isOwner = Boolean(
-              user && (
-                (opp.postedBy && (opp.postedBy === user.uid || opp.postedBy === user.id)) ||
-                (opp.posterUid && (opp.posterUid === user.uid || opp.posterUid === user.id)) ||
-                (opp.postedById && (opp.postedById === user.id || opp.postedById === user.uid)) ||
-                (opp.authorUid && (opp.authorUid === user.uid || opp.authorUid === user.id))
-              )
-            );
+            const isOwner = isMyPost(opp);
             const posterDisplayName = opp.postedByName || opp.posterName || opp.authorName || 'Alumni Member';
             const posterRoleLabel = opp.postedByRole || opp.posterRole || opp.authorRole || 'ALUMNI';
 
@@ -450,8 +522,17 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                       <span>Deadline: <span className="font-medium text-[#1F242D]">{opp.deadline || 'Rolling'}</span></span>
                     </div>
                     {isOwner && (
-                      <div className="flex items-center gap-1.5 text-[#2A537A] font-semibold text-[11px] pt-0.5">
-                        <span>Applicants Tracked: {opp.applicantsCount || 0}</span>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[#2A537A] font-semibold text-[11px]">
+                          Applicants Tracked: <strong>{opp.applicantsCount || 0}</strong>
+                        </span>
+                        <button
+                          onClick={() => handleOpenApplicants(opp)}
+                          className="px-2 py-0.5 rounded-md bg-[#E8EFF7] hover:bg-[#D4E3F3] text-[#2A537A] text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <Users className="w-3 h-3" />
+                          <span>View Applicants</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -501,6 +582,96 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW APPLICANTS MODAL (FOR POSTER / ALUMNI)
+          ========================================================================= */}
+      {selectedJobForApplicants && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-2xl rounded-2xl bg-[#FCFBF8] border border-[#E6E1D7] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-5 border-b border-[#E6E1D7] bg-[#FAF8F5] flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-[#1F242D]">
+                  Applicants for &ldquo;{selectedJobForApplicants.title}&rdquo;
+                </h3>
+                <p className="text-xs text-[#565D6D]">
+                  {selectedJobForApplicants.company} · {applicantsList.length} application(s) received
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedJobForApplicants(null)}
+                className="p-1 rounded-lg hover:bg-[#EFEBE3] text-[#7E8696] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-3 flex-1 text-xs">
+              {loadingApplicants ? (
+                <div className="py-12 text-center text-[#7E8696]">Loading applicant profiles...</div>
+              ) : applicantsList.length === 0 ? (
+                <div className="py-12 text-center text-[#7E8696] space-y-1">
+                  <Users className="w-8 h-8 text-[#A8B2C0] mx-auto" />
+                  <p className="font-semibold text-[#1F242D]">No applications submitted yet</p>
+                  <p className="text-[11px]">When students apply, their contact details and portfolio links will appear here.</p>
+                </div>
+              ) : (
+                applicantsList.map((app) => (
+                  <div key={app.id} className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E6E1D7] space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <UserAvatar name={app.applicantName} size="md" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[#1F242D]">{app.applicantName}</span>
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#EBF2EA] text-[#3D5B3B]">
+                              {app.applicantRole}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[11px] text-[#7E8696] mt-0.5">
+                            <Mail className="w-3 h-3" />
+                            <span>{app.applicantEmail}</span>
+                            {app.applicantCourse && <span>· {app.applicantCourse}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {app.resumeLink && (
+                        <a
+                          href={app.resumeLink.startsWith('http') ? app.resumeLink : `https://${app.resumeLink}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 rounded-lg bg-[#1F242D] text-white text-[11px] font-semibold flex items-center gap-1 hover:bg-[#343A46] transition-colors shrink-0"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>Resume / Portfolio</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+
+                    {app.note && (
+                      <div className="p-2.5 rounded-lg bg-[#FCFBF8] border border-[#E6E1D7] text-[11px] text-[#565D6D] leading-relaxed">
+                        <span className="font-semibold text-[#1F242D] block mb-0.5">Applicant Note:</span>
+                        {app.note}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 bg-[#FAF8F5] border-t border-[#E6E1D7] flex justify-end">
+              <button
+                onClick={() => setSelectedJobForApplicants(null)}
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[#1F242D] text-white hover:bg-[#343A46] cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -643,7 +814,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
               </div>
             ) : (
               <form onSubmit={handleApply} className="p-5 space-y-3.5 text-xs">
-                <div className="p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] space-y-0.5">
+                <div className="p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] space-y-1">
                   <span className="text-[10px] font-bold text-[#7E8696] uppercase block">
                     Applicant Information:
                   </span>
@@ -651,19 +822,35 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                     <span className="font-semibold text-[#1F242D]">{user?.name}</span>
                     <span className="text-[10px] text-[#5A7458] font-bold">{user?.role}</span>
                   </div>
-                  <p className="text-[11px] text-[#7E8696]">{user?.institutionName || 'DTSS COLLEGE OF COMMERCE (AUTONOMOUS)'}</p>
+                  <div className="flex items-center justify-between text-[11px] text-[#7E8696]">
+                    <span>{user?.email}</span>
+                    <span>{user?.institutionName || 'DTSS COLLEGE OF COMMERCE'}</span>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block font-semibold text-[#1F242D] mb-1">
-                    {selectedOpp.type === 'REFERRAL' ? 'Pitch to Referrer *' : 'Cover Note / Resume & Portfolio Link *'}
+                    Resume / Portfolio Link (Google Drive / GitHub / LinkedIn)
+                  </label>
+                  <input
+                    type="url"
+                    value={applyResumeLink}
+                    onChange={(e) => setApplyResumeLink(e.target.value)}
+                    placeholder="https://drive.google.com/file/... or portfolio url"
+                    className="w-full px-3 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#1F242D] mb-1">
+                    {selectedOpp.type === 'REFERRAL' ? 'Pitch to Referrer *' : 'Cover Note / Introduction *'}
                   </label>
                   <textarea
                     rows={4}
                     required
                     value={applyNote}
                     onChange={(e) => setApplyNote(e.target.value)}
-                    placeholder="Provide your GitHub/Portfolio URL, brief summary of matching skills, and why you are a top candidate..."
+                    placeholder="Briefly state your relevant skills, projects, and why you are a great match for this position..."
                     className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                   />
                 </div>
@@ -678,9 +865,10 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                   </button>
                   <button
                     type="submit"
-                    className="px-3.5 py-1.5 rounded-lg bg-[#1F242D] text-white font-semibold hover:bg-[#343A46] cursor-pointer"
+                    disabled={isSubmittingApp}
+                    className="px-3.5 py-1.5 rounded-lg bg-[#1F242D] text-white font-semibold hover:bg-[#343A46] disabled:opacity-50 cursor-pointer"
                   >
-                    Confirm Submission
+                    {isSubmittingApp ? 'Submitting...' : 'Confirm Submission'}
                   </button>
                 </div>
               </form>
@@ -698,7 +886,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
             <div className="p-4 border-b border-[#E6E1D7] bg-[#FAF8F5] flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-[#1F242D]">Post Career Opportunity</h3>
-                <p className="text-xs text-[#565D6D]">Publish an internship, full-time role, or alumni referral directly to students & alumni.</p>
+                <p className="text-xs text-[#565D6D]">Publish directly to shared cloud database for all students & alumni in real time.</p>
               </div>
               <button
                 onClick={() => setShowPostModal(false)}
@@ -727,7 +915,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                       required
                       value={postTitle}
                       onChange={(e) => setPostTitle(e.target.value)}
-                      placeholder="e.g. Associate Cloud Solutions Engineer"
+                      placeholder="e.g. Data Analisis or Cloud Engineer"
                       className="w-full px-3 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                     />
                   </div>
@@ -738,7 +926,7 @@ export const OpportunitiesView: React.FC<OpportunitiesViewProps> = ({ onOpenAuth
                       required
                       value={postCompany}
                       onChange={(e) => setPostCompany(e.target.value)}
-                      placeholder="e.g. Razorpay / Microsoft"
+                      placeholder="e.g. Enterprise Corp / Microsoft"
                       className="w-full px-3 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#E6E1D7] text-[#1F242D]"
                     />
                   </div>
